@@ -29,7 +29,7 @@
 ## Project Overview
 
 ### Objective
-Lantern is a smart study planning web application designed to help students efficiently organize their study tasks, manage schedules, and track progress. By combining intelligent planning tools with AI-assisted insights, Lantern aims to improve productivity, reduce procrastination, and support better study habits.
+Lantern is a smart study planning web application designed to help students efficiently organize their study tasks, manage schedules, and track progress. By combining intelligent planning tools with AI-powered quiz generation, Lantern aims to improve productivity, support active learning, and help students prepare effectively for exams.
 
 ### Target Audience
 - University and college students  
@@ -71,9 +71,9 @@ Lantern is a smart study planning web application designed to help students effi
 - Deadline reminders and notifications  
 
 ### AI-Assisted Features
-- Smart study schedule recommendations  
-- Productivity insights based on user behavior  
-- Task prioritization suggestions  
+- AI-powered quiz question generation based on selected topics  
+- Automatic answer generation and explanations on user request  
+- Support for exam preparation and self-assessment
 
 ### CRUD Operations
 - Users  
@@ -89,14 +89,15 @@ Lantern is a smart study planning web application designed to help students effi
 - `PUT /tasks/{id}`  
 - `DELETE /tasks/{id}`  
 - `GET /analytics`  
-- `POST /ai/recommendation`  
+- `POST /ai/quiz`  
 
 ---
 
 ## Milestones
 
 ### Milestone 1: Core Website Foundation
-- Build basic website layout (Navbar, Sidebar, Dashboard)  
+- Build basic website layout (Navbar, Sidebar, Dashboard)
+- Implement authentication system (JWT)    
 - Create study tasks and subjects (CRUD)  
 - Integrate frontend with backend APIs
 
@@ -104,11 +105,10 @@ Lantern is a smart study planning web application designed to help students effi
 - Daily and weekly study planner  
 - Task completion tracking  
 - Progress visualization (charts & statistics)  
-- Implement authentication system (JWT)  
 
 ### Milestone 3: Smart Features & Finalization
-- AI-assisted study recommendations  
-- Productivity insights dashboard  
+- Add AI-based quiz question & answer generation (on user request)
+- Study progress and performance insights dashboard  
 - Performance optimization  
 - Final testing, bug fixing, and deployment  
 ---
