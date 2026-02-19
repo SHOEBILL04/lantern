@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import api from "../api/client";
 import { ENDPOINTS } from "../api/endpoints";
 
@@ -17,13 +17,13 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user);
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("user", JSON.stringify(response.data.user));
-      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("token", response.data.access_token);
       return { success: true };
     } catch (error) {
       console.error("Login failed:", error);
-      return { 
-        success: false, 
-        message: error.response?.data?.message || "Invalid credentials" 
+      return {
+        success: false,
+        message: error.response?.data?.message || "Invalid credentials"
       };
     }
   };
@@ -35,24 +35,52 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user);
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("user", JSON.stringify(response.data.user));
-      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("token", response.data.access_token);
       return { success: true };
     } catch (error) {
       console.error("Registration failed:", error);
-      return { 
-        success: false, 
-        message: error.response?.data?.message || "Registration failed" 
+      return {
+        success: false,
+        message: error.response?.data?.message || "Registration failed"
       };
     }
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    setUser(null);
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+  const logout = async () => {
+    try {
+      await api.post(ENDPOINTS.LOGOUT);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      setIsAuthenticated(false);
+      setUser(null);
+      localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+    }
   };
+
+  const checkAuth = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setIsAuthenticated(false);
+      setUser(null);
+      return;
+    }
+
+    try {
+      const response = await api.post(ENDPOINTS.ME); // Using POST as defined in api.php
+      setIsAuthenticated(true);
+      setUser(response.data);
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      logout();
+    }
+  };
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login, register, logout }}>
