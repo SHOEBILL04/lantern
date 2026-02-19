@@ -113,3 +113,37 @@ Lantern is a smart study planning web application designed to help students effi
 - Final testing, bug fixing, and deployment  
 ---
 
+
+## Docker Setup
+
+### Prerequisites
+- Docker & Docker Compose
+
+### Getting Started
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd lantern
+   ```
+
+2. Run the automated setup script:
+   - **Linux/Mac:**
+     ```bash
+     ./bin/setup.sh
+     ```
+     *(Note: If you encounter permission errors, run with `sudo ./bin/setup.sh`)*
+   - **Windows:**
+     Double-click `bin/setup.bat` or run in terminal:
+     ```cmd
+     bin\setup.bat
+     ```
+
+3. Access the application:
+   - **Frontend/Backend:** [http://localhost:8000](http://localhost:8000)
+
+### Running Commands
+To run Artisan or Composer commands inside the container:
+```bash
+docker compose exec app php artisan migrate
+docker compose exec app composer install
+```
