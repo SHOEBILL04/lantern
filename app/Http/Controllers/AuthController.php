@@ -73,7 +73,9 @@ class AuthController extends Controller
     {
         auth()->logout();
 
-        return response()->json(['message' => 'Successfully logged out']);
+        $cookie = cookie()->forget('token');
+
+        return response()->json(['message' => 'Successfully logged out'])->cookie($cookie);
     }
 
     /**
@@ -95,11 +97,15 @@ class AuthController extends Controller
      */
     protected function respondWithToken($token)
     {
+        $minutes = auth()->factory()->getTTL();
+        // create a cookie named 'token' that expires in $minutes, on path '/', 
+        // domain null, secure false (for local dev, should be true in prod), httpOnly true, raw false, sameSite Lax
+        $cookie = cookie('token', $token, $minutes, '/', null, false, true, false, 'Lax');
+
         return response()->json([
-            'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60,
-             'user' => auth()->user()
-        ]);
+            'expires_in' => $minutes * 60,
+            'user' => auth()->user()
+        ])->cookie($cookie);
     }
 }

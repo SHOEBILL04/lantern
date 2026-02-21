@@ -5,6 +5,11 @@ import { ENDPOINTS } from "../api/endpoints";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  // Force cleanup of legacy token immediately on load
+  if (localStorage.getItem("token")) {
+    localStorage.removeItem("token");
+  }
+
   const [isAuthenticated, setIsAuthenticated] = useState(
     localStorage.getItem("isAuthenticated") === "true"
   );
@@ -17,7 +22,6 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user);
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("user", JSON.stringify(response.data.user));
-      localStorage.setItem("token", response.data.access_token);
       return { success: true };
     } catch (error) {
       console.error("Login failed:", error);
@@ -35,7 +39,6 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user);
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("user", JSON.stringify(response.data.user));
-      localStorage.setItem("token", response.data.access_token);
       return { success: true };
     } catch (error) {
       console.error("Registration failed:", error);
@@ -56,25 +59,21 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("user");
-      localStorage.removeItem("token");
+      localStorage.removeItem("token"); // Cleanup legacy token
     }
   };
 
   const checkAuth = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setIsAuthenticated(false);
-      setUser(null);
-      return;
-    }
-
     try {
       const response = await api.post(ENDPOINTS.ME); // Using POST as defined in api.php
       setIsAuthenticated(true);
       setUser(response.data);
     } catch (error) {
       console.error("Auth check failed:", error);
-      logout();
+      setIsAuthenticated(false);
+      setUser(null);
+      localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("user");
     }
   };
 
