@@ -36,6 +36,10 @@ class Handler extends ExceptionHandler
             ], 400);
         }
 
+        if (config('app.debug')) {
+            return parent::render($request, $exception);
+        }
+
         // Default response for unexpected exceptions
         return response()->json([
             'error' => true,
