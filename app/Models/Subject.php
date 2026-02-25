@@ -9,7 +9,7 @@ class Subject extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'color_code'];
+    protected $fillable = ['user_id', 'name', 'color_code', 'weekly_goal_minutes'];
 
     public function user()
     {

@@ -21,6 +21,7 @@ class User extends Authenticatable implements JWTSubject
         'current_streak',
         'longest_streak',
         'last_activity_date',
+        'weekly_goal_minutes',
     ];
 
     protected $casts = [
