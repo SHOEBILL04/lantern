@@ -17,6 +17,13 @@ Route::group([
     Route::post('/me', [AuthController::class, 'me']);
 });
 
+Route::group(['middleware' => 'auth:api'], function () {
+    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
+    Route::post('/dashboard/add-subject-course', [\App\Http\Controllers\DashboardController::class, 'addSubjectCourse']);
+    Route::post('/study-sessions', [\App\Http\Controllers\StudySessionController::class, 'store']);
+    Route::patch('/tasks/{id}/complete', [\App\Http\Controllers\DashboardController::class, 'completeTask']);
+});
+
 // items (can later be protected by JWT middleware)
 Route::get('/items', [UsersController::class, 'index']);
 Route::get('/items/{id}', [UsersController::class, 'show']);

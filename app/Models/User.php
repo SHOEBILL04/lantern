@@ -15,10 +15,18 @@ class User extends Authenticatable implements JWTSubject
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        "id",
         'name',
         'email',
         'password',
+        'current_streak',
+        'longest_streak',
+        'last_activity_date',
+        'weekly_goal_minutes',
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'last_activity_date' => 'date',
     ];
 
     /**
@@ -34,6 +42,48 @@ class User extends Authenticatable implements JWTSubject
     public function posts()
     {
         return $this->hasMany(Post::class); // One user has many posts
+    }
+
+    public function subjects()
+    {
+        return $this->hasMany(Subject::class);
+    }
+
+    public function exams()
+    {
+        return $this->hasMany(Exam::class);
+    }
+
+    public function courses()
+    {
+        return $this->hasMany(Course::class);
+    }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    public function resources()
+    {
+        return $this->hasMany(Resource::class);
+    }
+
+    public function achievements()
+    {
+        return $this->belongsToMany(Achievement::class, 'user_achievements')
+                    ->withPivot('unlocked_at')
+                    ->withTimestamps();
+    }
+
+    public function studySessions()
+    {
+        return $this->hasMany(StudySession::class);
+    }
+
+    public function sleepCycles()
+    {
+        return $this->hasMany(SleepCycle::class);
     }
 
     /**

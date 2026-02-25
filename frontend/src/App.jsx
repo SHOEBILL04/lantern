@@ -1,4 +1,4 @@
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
 export default function App() {
@@ -47,6 +47,20 @@ export default function App() {
           LANTERN
         </Link>
 
+        {isAuthenticated && (
+          <div style={{ display: "flex", gap: "1rem", overflowX: "auto", flexWrap: "wrap", justifyContent: "center", padding: "0 1rem" }}>
+            <NavLink to="/dashboard" style={navLinkStyle}>Dashboard</NavLink>
+            <NavLink to="/schedule" style={navLinkStyle}>Schedule</NavLink>
+            <NavLink to="/tasks" style={navLinkStyle}>Tasks</NavLink>
+            <NavLink to="/progress" style={navLinkStyle}>Progress</NavLink>
+            <NavLink to="/subjects" style={navLinkStyle}>Subjects</NavLink>
+            <NavLink to="/notes" style={navLinkStyle}>Notes</NavLink>
+            <NavLink to="/habits" style={navLinkStyle}>Habits</NavLink>
+            <NavLink to="/achievements" style={navLinkStyle}>Achievements</NavLink>
+            <NavLink to="/resources" style={navLinkStyle}>Resources</NavLink>
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
           {!isAuthenticated ? (
             <>
@@ -66,7 +80,7 @@ export default function App() {
       </nav>
 
       {/* Main Content Area */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
         <Outlet />
       </main>
 
@@ -117,3 +131,13 @@ const logoutButtonStyle = {
   cursor: "pointer",
   fontSize: "0.875rem",
 };
+
+const navLinkStyle = ({ isActive }) => ({
+  color: isActive ? "#2563eb" : "#4b5563",
+  textDecoration: "none",
+  fontSize: "0.875rem",
+  fontWeight: isActive ? 600 : 500,
+  padding: "0.5rem",
+  borderRadius: "0.375rem",
+  transition: "color 0.2s, background-color 0.2s",
+});
