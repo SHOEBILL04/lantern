@@ -23,6 +23,7 @@ export default function Dashboard() {
   // --- Timer State (with auto-restore from localStorage) ---
   const [timerMode, setTimerMode] = useState(() => localStorage.getItem("timerMode") || "pomodoro");
   const [pomodoroDuration, setPomodoroDuration] = useState(() => parseInt(localStorage.getItem("pomodoroDuration")) || 25);
+
   const [timeLeft, setTimeLeft] = useState(() => {
     const savedTime = localStorage.getItem("timeLeft");
     return savedTime !== null ? parseInt(savedTime) : (25 * 60);
@@ -129,6 +130,8 @@ export default function Dashboard() {
   const toggleTimer = () => {
     if (!isActive) {
       // Starting
+
+
       startTimeRef.current = new Date().toISOString();
       setLastTickTime(Date.now());
       setIsActive(true);
@@ -201,12 +204,53 @@ export default function Dashboard() {
       };
       await api.post("/study-sessions", payload);
 
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#4f46e5', '#60a5fa', '#10b981', '#f59e0b', '#ec4899']
-      });
+      // Auto-complete the first pending task for this course upon successful session
+      let isCourseCompletedNow = false;
+      if (data && data.subjects) {
+        for (const subject of data.subjects) {
+          const course = subject.courses.find(c => c.id.toString() === selectedCourse.toString());
+          if (course) {
+            const pendingTasks = course.tasks.filter(t => t.status !== 'completed');
+            if (pendingTasks.length > 0) {
+              await api.patch(`/tasks/${pendingTasks[0].id}/complete`);
+              if (pendingTasks.length === 1) {
+                // If this was the absolute last pending task
+                isCourseCompletedNow = true;
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      if (isCourseCompletedNow) {
+        // Grand Celebration (Fireworks)
+        const duration = 3 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+        const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+        const interval = setInterval(function () {
+          const timeLeft = animationEnd - Date.now();
+
+          if (timeLeft <= 0) {
+            return clearInterval(interval);
+          }
+
+          const particleCount = 50 * (timeLeft / duration);
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+          confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        }, 250);
+      } else {
+        // Standard session celebration
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#4f46e5', '#60a5fa', '#10b981', '#f59e0b', '#ec4899']
+        });
+      }
 
       fetchDashboardData();
     } catch (err) {
@@ -456,7 +500,7 @@ export default function Dashboard() {
                 <input
                   type="number"
                   min="1"
-                  max="50"
+                  max="16"
                   value={newTasksCount}
                   onChange={e => setNewTasksCount(e.target.value)}
                   required
@@ -486,7 +530,7 @@ export default function Dashboard() {
                 <div key={course.id} className="course-block">
                   <h4 className="course-title">{course.title}</h4>
                   <div className="task-grid">
-                    {course.tasks.map(task => (
+                    {course.tasks.map((task, index) => (
                       <div
                         key={task.id}
                         className={`task-block ${task.status === 'completed' ? 'completed' : 'pending'}`}
@@ -496,7 +540,7 @@ export default function Dashboard() {
                           }
                         }}
                       >
-                        {task.status === 'completed' ? '✓' : '◯'} Task {task.id}
+                        {task.status === 'completed' ? '✓' : '◯'} Task {index + 1}
                       </div>
                     ))}
                     {course.tasks.length === 0 && <span className="text-gray-500 text-sm">No tasks</span>}

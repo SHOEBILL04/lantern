@@ -86,7 +86,7 @@ class DashboardController extends Controller
         $request->validate([
             'subject_name' => 'required|string|max:255',
             'course_title' => 'required|string|max:255',
-            'number_of_tasks' => 'required|integer|min:1|max:50',
+            'number_of_tasks' => 'required|integer|min:1|max:16',
             'color_code' => 'nullable|string|max:10',
         ]);
 
