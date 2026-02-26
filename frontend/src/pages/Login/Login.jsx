@@ -1,12 +1,22 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useEffect, useState } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+
+import "./Login.css";
+
+import logo from "../../assets/images/logo.png";
+import loginBg from "../../assets/images/login-reg-bg.png";
 
 export default function Login() {
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,9 +30,9 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    
+
     const result = await login(email, password);
-    
+
     if (result.success) {
       navigate("/dashboard");
     } else {
@@ -32,94 +42,81 @@ export default function Login() {
   };
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "2rem",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "400px",
-          background: "#ffffff",
-          padding: "2rem",
-          borderRadius: "0.5rem",
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.5rem", fontWeight: "bold" }}>Login</h2>
-          <p style={{ color: "#6b7280" }}>Sign in to your account</p>
+    <div className="loginPage" style={{ backgroundImage: `url(${loginBg})` }}>
+      <Link to="/" className="loginBrand" aria-label="Go to Home">
+        <img className="loginBrandLogo" src={logo} alt="Lantern logo" />
+        <span className="loginBrandText">LANTERN</span>
+      </Link>
+
+      <div className="loginCenter">
+        <div className="loginCard">
+          <div className="loginHeader">
+            <h2 className="loginTitle">Login</h2>
+            <p className="loginSubtitle">Sign in to your account</p>
+          </div>
+
+          {error && <div className="loginError">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="loginForm">
+            <div className="loginField">
+              <label className="loginLabel">Email</label>
+              <input
+                className="loginInput"
+                type="email"
+                placeholder="email@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="loginField">
+              <label className="loginLabel">Password</label>
+
+              <div className="passwordWrap">
+                <input
+                  className="loginInput passwordInput"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+
+                <button
+                  type="button"
+                  className="passwordToggleBtn"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <FaEyeSlash className="passwordToggleIcon" />
+                  ) : (
+                    <FaEye className="passwordToggleIcon" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`loginButton ${loading ? "isLoading" : ""}`}
+            >
+              {loading ? "Signing In..." : "Login"}
+            </button>
+          </form>
+
+          <p className="loginFooterText">
+            Don&apos;t have an account?{" "}
+            <Link to="/register" className="loginFooterLink">
+              Register
+            </Link>
+          </p>
         </div>
-
-        {error && (
-          <div style={{ marginBottom: "1rem", color: "#ef4444", fontSize: "0.875rem", textAlign: "center", padding: "0.5rem", background: "#fef2f2", borderRadius: "0.375rem" }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 500 }}>Email</label>
-            <input
-              type="email"
-              placeholder="email@example.com"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 500 }}>Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          <button type="submit" disabled={loading} style={{...submitButtonStyle, opacity: loading ? 0.7 : 1}}>
-            {loading ? "Signing In..." : "Sign In"}
-          </button>
-        </form>
-
-        <p style={{ marginTop: "1.5rem", textAlign: "center", color: "#6b7280", fontSize: "0.875rem" }}>
-          Don't have an account?{" "}
-          <Link to="/register" style={{ color: "#2563eb", textDecoration: "none", fontWeight: "bold" }}>
-            Register
-          </Link>
-        </p>
       </div>
     </div>
   );
 }
-
-const inputStyle = {
-  padding: "0.5rem 0.75rem",
-  borderRadius: "0.375rem",
-  border: "1px solid #d1d5db",
-  fontSize: "1rem",
-  outline: "none",
-};
-
-const submitButtonStyle = {
-  marginTop: "0.5rem",
-  padding: "0.6rem",
-  borderRadius: "0.375rem",
-  border: "none",
-  background: "#2563eb",
-  color: "#ffffff",
-  fontWeight: "bold",
-  fontSize: "1rem",
-  cursor: "pointer",
-};
