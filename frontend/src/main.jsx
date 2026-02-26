@@ -20,6 +20,8 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import "./index.css";
+import "./styles/base/fonts.css";
+import "./styles/base/globals.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <AuthProvider>
