@@ -265,5 +265,6 @@
 }
 
 .loginFooterLink:hover {
-  border-bottom-color: rgba(110, 193, 255, 0.95);
+  color: #6ec1ff;
+  border-bottom-color: #6ec1ff;
 }
