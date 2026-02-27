@@ -9,7 +9,7 @@ class Task extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'course_id', 'title', 'description', 'status', 'due_date', 'completed_at'];
+    protected $fillable = ['user_id', 'course_id', 'title', 'subject', 'description', 'status', 'priority', 'due_date', 'completed_at'];
 
     protected $casts = [
         'due_date' => 'date',
@@ -24,5 +24,10 @@ class Task extends Model
     public function course()
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function updates()
+    {
+        return $this->hasMany(TaskUpdate::class);
     }
 }
