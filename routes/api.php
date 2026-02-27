@@ -22,6 +22,10 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::post('/dashboard/add-subject-course', [\App\Http\Controllers\DashboardController::class, 'addSubjectCourse']);
     Route::post('/study-sessions', [\App\Http\Controllers\StudySessionController::class, 'store']);
     Route::patch('/tasks/{id}/complete', [\App\Http\Controllers\DashboardController::class, 'completeTask']);
+    
+    // Habits
+    Route::apiResource('habits', \App\Http\Controllers\HabitController::class)->except(['show', 'update']);
+    Route::post('habits/{habit}/track', [\App\Http\Controllers\HabitController::class, 'track']);
 });
 
 // items (can later be protected by JWT middleware)
