@@ -1,13 +1,26 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useEffect, useState } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+
+import "./Register.css";
+
+import logo from "../../assets/images/logo.png";
+import registerBg from "../../assets/images/login-reg-bg.png";
 
 export default function Register() {
   const { isAuthenticated, register } = useAuth();
   const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,119 +33,168 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
-    
-    const result = await register(name, email, password);
-    
-    if (result.success) {
-      navigate("/dashboard");
-    } else {
-      setError(result.message);
+
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Name can't be blank or only spaces
+    if (!cleanName) {
+      setError("Full name cannot be empty or only spaces.");
+      return;
     }
-    setLoading(false);
+
+    // Email must end with @gmail.com (case/space safe)
+    if (!cleanEmail.endsWith("@gmail.com")) {
+      setError("Email must end with @gmail.com");
+      return;
+    }
+
+    // Password must be at least 8 characters
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    // Confirm password match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await register(cleanName, cleanEmail, password);
+
+      if (result.success) {
+        alert(
+          `🎉 Welcome to Lantern, ${cleanName}!\n\n` +
+            `Your account has been successfully created.\n` +
+            `We're excited to have you on board 🚀`
+        );
+
+        navigate("/dashboard");
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div
-      style={{
-        flex: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "2rem",
-      }}
+      className="registerPage"
+      style={{ backgroundImage: `url(${registerBg})` }}
     >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "400px",
-          background: "#ffffff",
-          padding: "2rem",
-          borderRadius: "0.5rem",
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.5rem", fontWeight: "bold" }}>Register</h2>
-          <p style={{ color: "#6b7280" }}>Create a new account</p>
+      <Link to="/" className="registerBrand" aria-label="Go to Home">
+        <img className="registerBrandLogo" src={logo} alt="Lantern logo" />
+        <span className="registerBrandText">LANTERN</span>
+      </Link>
+
+      <div className="registerCenter">
+        <div className="registerCard">
+          <div className="registerHeader">
+            <h2 className="registerTitle">Register</h2>
+            <p className="registerSubtitle">Create a new account</p>
+          </div>
+
+          {error && <div className="registerError">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="registerForm">
+            <div className="registerField">
+              <label className="registerLabel">Full Name</label>
+              <input
+                className="registerInput"
+                type="text"
+                placeholder="enter your name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+              />
+            </div>
+
+            <div className="registerField">
+              <label className="registerLabel">Email</label>
+              <input
+                className="registerInput"
+                type="email"
+                placeholder="example@gmail.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="registerField">
+              <label className="registerLabel">Password</label>
+              <div className="registerPasswordWrap">
+                <input
+                  className="registerInput registerPasswordInput"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="enter your password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="registerPasswordToggleBtn"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
+
+            <div className="registerField">
+              <label className="registerLabel">Confirm Password</label>
+              <div className="registerPasswordWrap">
+                <input
+                  className="registerInput registerPasswordInput"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="confirm your password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="registerPasswordToggleBtn"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  aria-label={
+                    showConfirmPassword ? "Hide password" : "Show password"
+                  }
+                >
+                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`registerButton ${loading ? "isLoading" : ""}`}
+            >
+              {loading ? "Registering..." : "Register"}
+            </button>
+          </form>
+
+          <p className="registerFooterText">
+            Already have an account?{" "}
+            <Link to="/login" className="registerFooterLink">
+              Login
+            </Link>
+          </p>
         </div>
-
-        {error && (
-          <div style={{ marginBottom: "1rem", color: "#ef4444", fontSize: "0.875rem", textAlign: "center", padding: "0.5rem", background: "#fef2f2", borderRadius: "0.375rem" }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 500 }}>Full Name</label>
-            <input
-              type="text"
-              placeholder="John Doe"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 500 }}>Email</label>
-            <input
-              type="email"
-              placeholder="email@example.com"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 500 }}>Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          <button type="submit" disabled={loading} style={{...submitButtonStyle, opacity: loading ? 0.7 : 1}}>
-            {loading ? "Registering..." : "Register"}
-          </button>
-        </form>
-
-        <p style={{ marginTop: "1.5rem", textAlign: "center", color: "#6b7280", fontSize: "0.875rem" }}>
-          Already have an account?{" "}
-          <Link to="/login" style={{ color: "#2563eb", textDecoration: "none", fontWeight: "bold" }}>
-            Login
-          </Link>
-        </p>
       </div>
     </div>
   );
 }
-
-const inputStyle = {
-  padding: "0.5rem 0.75rem",
-  borderRadius: "0.375rem",
-  border: "1px solid #d1d5db",
-  fontSize: "1rem",
-  outline: "none",
-};
-
-const submitButtonStyle = {
-  marginTop: "0.5rem",
-  padding: "0.6rem",
-  borderRadius: "0.375rem",
-  border: "none",
-  background: "#2563eb",
-  color: "#ffffff",
-  fontWeight: "bold",
-  fontSize: "1rem",
-  cursor: "pointer",
-};
