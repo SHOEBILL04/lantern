@@ -13,20 +13,17 @@ export default function Welcome() {
   const [loading, setLoading] = useState(true);
   const year = useMemo(() => new Date().getFullYear(), []);
 
-  // Body classes for global bg + font
   useEffect(() => {
     const cls = ["font-body", "bg-dynamic", "overflow-x-hidden", "welcome"];
     document.body.classList.add(...cls);
     return () => document.body.classList.remove(...cls);
   }, []);
 
-  // Loader
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 650);
     return () => clearTimeout(t);
   }, []);
 
-  // Scroll reveal
   useEffect(() => {
     const els = document.querySelectorAll(".reveal");
     const io = new IntersectionObserver(
@@ -37,14 +34,12 @@ export default function Welcome() {
     return () => io.disconnect();
   }, []);
 
-  // Scroll arrow show/hide
   useEffect(() => {
     const onScroll = () => setShowArrow(window.scrollY <= 100);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close mobile menu with ESC
   useEffect(() => {
     if (!menuOpen) return;
     const onKeyDown = (e) => e.key === "Escape" && setMenuOpen(false);
@@ -83,9 +78,9 @@ export default function Welcome() {
 
           {/* Desktop links */}
           <div className="welcome-navlinks">
-            <a href="#" className="nav-link">
+            <Link to="/how-to-study" className="nav-link">
               How to Study
-            </a>
+            </Link>
             <Link to="/about" className="nav-link">
               About
             </Link>
