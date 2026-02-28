@@ -86,6 +86,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(SleepCycle::class);
     }
 
+    public function habits()
+    {
+        return $this->hasMany(Habit::class);
+    }
+
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *

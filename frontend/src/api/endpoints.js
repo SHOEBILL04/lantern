@@ -6,4 +6,6 @@ export const ENDPOINTS = {
   REFRESH: "/auth/refresh",
   LOGOUT: "/auth/logout",
   ITEMS: "/items",
+  HABITS: "/habits",
+  HABITS_TRACK: (id) => `/habits/${id}/track`,
 };
