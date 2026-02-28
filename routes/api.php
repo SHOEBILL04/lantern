@@ -23,6 +23,9 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::post('/study-sessions', [\App\Http\Controllers\StudySessionController::class, 'store']);
     Route::patch('/tasks/{id}/complete', [\App\Http\Controllers\DashboardController::class, 'completeTask']);
     
+    // Tasks CRUD & Updates
+    Route::apiResource('tasks', \App\Http\Controllers\TaskController::class);
+    Route::post('/tasks/{id}/updates', [\App\Http\Controllers\TaskController::class, 'addUpdate']);
     // Habits
     Route::apiResource('habits', \App\Http\Controllers\HabitController::class)->except(['show', 'update']);
     Route::post('habits/{habit}/track', [\App\Http\Controllers\HabitController::class, 'track']);
