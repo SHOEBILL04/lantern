@@ -26,6 +26,9 @@ Route::group(['middleware' => 'auth:api'], function () {
     // Tasks CRUD & Updates
     Route::apiResource('tasks', \App\Http\Controllers\TaskController::class);
     Route::post('/tasks/{id}/updates', [\App\Http\Controllers\TaskController::class, 'addUpdate']);
+    // Habits
+    Route::apiResource('habits', \App\Http\Controllers\HabitController::class)->except(['show', 'update']);
+    Route::post('habits/{habit}/track', [\App\Http\Controllers\HabitController::class, 'track']);
 });
 
 // items (can later be protected by JWT middleware)
