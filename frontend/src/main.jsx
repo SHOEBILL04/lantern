@@ -7,6 +7,7 @@ import Welcome from "./pages/Welcome/Welcome";
 import Login from "./pages/Login/Login";
 import Register from "./pages/Register/Register";
 import HowToStudy from "./pages/HowToStudy/HowToStudy";
+import About from "./pages/About/About";
 
 import Dashboard from "./pages/Dashboard/Dashboard";
 import Schedule from "./pages/Schedule/Schedule";
@@ -35,6 +36,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="how-to-study" element={<HowToStudy />} />
+          <Route path="about" element={<About />} />
 
           <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
