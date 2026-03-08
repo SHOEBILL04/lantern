@@ -1,0 +1,19 @@
+/* Make sure the app doesn't force a white page */
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+/* If your App wrapper is white, override it when welcome page is open */
+body.welcome #root {
+  background: transparent;
+}
+
+/* Apply your background properly */
+body.bg-dynamic {
+  background: radial-gradient(circle at 70% 40%, #0b3d66, #021527, #000000);
+  background-attachment: fixed;
+}

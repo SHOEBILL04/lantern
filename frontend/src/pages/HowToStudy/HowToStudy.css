@@ -1,0 +1,32 @@
+.howToStudyPage {
+  background: linear-gradient(135deg, #071a2c 0%, #0c2d4a 50%, #123a5c 100%);
+  min-height: 100vh;
+}
+
+.lanternBrandText {
+  font-family: "MonstaFectro", "Monsta Fectro", sans-serif;
+  letter-spacing: 0.14em;
+  font-weight: 800;
+  color: #6ec1ff;
+}
+
+.sectionTitle {
+  font-family: "Kicaps", sans-serif;
+  letter-spacing: 0.02em;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar for TOC */
+.hts-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.hts-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.25);
+  border-radius: 999px;
+}
+.hts-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.4);
+}
