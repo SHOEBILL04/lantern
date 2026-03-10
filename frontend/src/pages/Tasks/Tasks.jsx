@@ -16,19 +16,22 @@ export default function Tasks() {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        fetchDashboardData();
+        fetchCoursesAndSubjects();
     }, []);
 
     useEffect(() => {
         fetchTasks();
     }, [viewMode, filters]);
 
-    const fetchDashboardData = async () => {
+    const fetchCoursesAndSubjects = async () => {
         try {
-            const res = await api.get('/dashboard');
-            setDashboardData(res.data);
+            const [subjectsRes, coursesRes] = await Promise.all([
+                api.get('/subjects'),
+                api.get('/courses')
+            ]);
+            setDashboardData({ subjects: subjectsRes.data, courses: coursesRes.data });
         } catch (error) {
-            console.error('Error fetching dashboard data for courses:', error);
+            console.error('Error fetching data for courses:', error);
         }
     };
 
@@ -122,11 +125,10 @@ export default function Tasks() {
     };
 
     const extractedCourses = [];
-    if (dashboardData?.subjects) {
+    if (dashboardData?.subjects && dashboardData?.courses) {
         dashboardData.subjects.forEach(sub => {
-            if (sub.courses) {
-                sub.courses.forEach(c => extractedCourses.push({ ...c, subjectName: sub.name }));
-            }
+            const subCourses = dashboardData.courses.filter(c => c.subject_id === sub.id) || [];
+            subCourses.forEach(c => extractedCourses.push({ ...c, subjectName: sub.name }));
         });
     }
 

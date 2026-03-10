@@ -18,15 +18,17 @@ Route::group([
 });
 
 Route::group(['middleware' => 'auth:api'], function () {
-    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
-    Route::post('/dashboard/add-subject-course', [\App\Http\Controllers\DashboardController::class, 'addSubjectCourse']);
-    Route::post('/study-sessions', [\App\Http\Controllers\StudySessionController::class, 'store']);
-    Route::patch('/tasks/{id}/complete', [\App\Http\Controllers\DashboardController::class, 'completeTask']);
+    // Basic CRUD Operations for Database-First approach
+    Route::apiResource('subjects', \App\Http\Controllers\SubjectController::class);
+    Route::apiResource('courses', \App\Http\Controllers\CourseController::class);
+    Route::apiResource('study-sessions', \App\Http\Controllers\StudySessionController::class);
     
     // Tasks CRUD & Updates
     Route::apiResource('tasks', \App\Http\Controllers\TaskController::class);
+    Route::patch('/tasks/{id}/complete', [\App\Http\Controllers\TaskController::class, 'completeTask']);
     Route::post('/tasks/{id}/updates', [\App\Http\Controllers\TaskController::class, 'addUpdate']);
-    // Habits
+    
+    // Habits CRUD
     Route::apiResource('habits', \App\Http\Controllers\HabitController::class)->except(['show', 'update']);
     Route::post('habits/{habit}/track', [\App\Http\Controllers\HabitController::class, 'track']);
 });
