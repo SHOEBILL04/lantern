@@ -40,12 +40,97 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/dashboard");
-      setData(res.data);
-      if (res.data.subjects && res.data.subjects.length > 0 && !selectedCourse) {
-        let defaultCourse = res.data.subjects[0]?.courses?.[0]?.id;
+      const [userRes, subjectsRes, coursesRes, tasksRes, sessionsRes] = await Promise.all([
+        api.post("/auth/me"),
+        api.get("/subjects"),
+        api.get("/courses"),
+        api.get("/tasks"),
+        api.get("/study-sessions")
+      ]);
+
+      const userInfo = userRes.data;
+      const subjects = subjectsRes.data;
+      const courses = coursesRes.data;
+      const tasks = tasksRes.data;
+      const sessions = sessionsRes.data;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const startOfWeek = new Date();
+      startOfWeek.setDate(startOfWeek.getDate() - Math.max(0, startOfWeek.getDay() - 1)); // Mon Start Week
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      let studyTimeTodayMinutes = 0;
+      let studyTimeThisWeekMinutes = 0;
+      
+      sessions.forEach(s => {
+        const sTime = new Date(s.start_time);
+        if (sTime >= today) studyTimeTodayMinutes += s.duration_minutes;
+        if (sTime >= startOfWeek) studyTimeThisWeekMinutes += s.duration_minutes;
+      });
+
+      let tasksCompletedToday = 0;
+      let pendingTasks = 0;
+      tasks.forEach(t => {
+        if (t.status === 'completed') {
+          if (t.completed_at && new Date(t.completed_at) >= today) {
+             tasksCompletedToday++;
+          }
+        } else {
+          pendingTasks++;
+        }
+      });
+      const totalRelevantTasks = tasksCompletedToday + pendingTasks;
+
+      const subjectsData = subjects.map(subject => {
+        const subjectCourses = courses.filter(c => c.subject_id === subject.id).map(course => {
+            const courseTasks = tasks.filter(t => t.course_id === course.id);
+            return { ...course, tasks: courseTasks };
+        });
+
+        let subjectStudyTimeThisWeek = 0;
+        const subjectCourseIds = subjectCourses.map(c => c.id);
+        sessions.forEach(s => {
+            if (subjectCourseIds.includes(s.course_id)) {
+                if (new Date(s.start_time) >= startOfWeek) {
+                    subjectStudyTimeThisWeek += s.duration_minutes;
+                }
+            }
+        });
+
+        let totalSubjectTasks = 0;
+        let completedSubjectTasks = 0;
+        subjectCourses.forEach(c => {
+            totalSubjectTasks += c.tasks.length;
+            completedSubjectTasks += c.tasks.filter(t => t.status === 'completed').length;
+        });
+
+        return {
+            ...subject,
+            weekly_progress_minutes: subjectStudyTimeThisWeek,
+            total_tasks: totalSubjectTasks,
+            completed_tasks: completedSubjectTasks,
+            courses: subjectCourses
+        };
+      });
+
+      const aggregatedData = {
+          study_time_today_minutes: studyTimeTodayMinutes,
+          tasks_completed_today: tasksCompletedToday,
+          total_relevant_tasks: totalRelevantTasks > 0 ? totalRelevantTasks : 1,
+          study_streak: userInfo.current_streak || 0,
+          weekly_goal_minutes: userInfo.weekly_goal_minutes || 1680,
+          study_time_this_week_minutes: studyTimeThisWeekMinutes,
+          subjects: subjectsData
+      };
+
+      setData(aggregatedData);
+      
+      if (aggregatedData.subjects && aggregatedData.subjects.length > 0 && !selectedCourse) {
+        let defaultCourse = aggregatedData.subjects[0]?.courses?.[0]?.id;
         if (!defaultCourse) {
-          for (let s of res.data.subjects) {
+          for (let s of aggregatedData.subjects) {
             if (s.courses && s.courses.length > 0) {
               defaultCourse = s.courses[0].id;
               break;
@@ -55,9 +140,8 @@ export default function Dashboard() {
         if (defaultCourse) setSelectedCourse(defaultCourse);
       }
 
-      // Update activeSubject if modal is open to reflect new completed tasks
       if (activeSubject) {
-        const updatedSubject = res.data.subjects.find(s => s.id === activeSubject.id);
+        const updatedSubject = aggregatedData.subjects.find(s => s.id === activeSubject.id);
         if (updatedSubject) setActiveSubject(updatedSubject);
       }
       setError(null);
@@ -265,11 +349,31 @@ export default function Dashboard() {
     e.preventDefault();
     try {
       setIsSubmitting(true);
-      await api.post("/dashboard/add-subject-course", {
-        subject_name: newSubjectName,
-        course_title: newCourseTitle,
-        number_of_tasks: parseInt(newTasksCount),
+      
+      const subjRes = await api.post("/subjects", {
+        name: newSubjectName,
+        color_code: "#cbd5e1"
       });
+      const subjectId = subjRes.data.id;
+
+      const courseRes = await api.post("/courses", {
+        subject_id: subjectId,
+        title: newCourseTitle,
+        description: "Dynamically added from dashboard"
+      });
+      const courseId = courseRes.data.id;
+
+      const tasksPromises = [];
+      const numTasks = parseInt(newTasksCount);
+      for(let i=1; i<=numTasks; i++) {
+        tasksPromises.push(api.post("/tasks", {
+          course_id: courseId,
+          title: `Task ${i} for ${newCourseTitle}`,
+          description: "Auto-generated task"
+        }));
+      }
+      await Promise.all(tasksPromises);
+
       setIsModalOpen(false);
       setNewSubjectName("");
       setNewCourseTitle("");
