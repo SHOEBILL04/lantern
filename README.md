@@ -111,17 +111,5 @@ Lantern is a smart study planning web application designed to help students effi
 - Study progress and performance insights dashboard  
 - Performance optimization  
 - Final testing, bug fixing, and deployment  
-
 ---
-
-## Setup Instructions (Database-First)
-This project has migrated from a code-first architecture (Laravel Eloquent/Migrations) to a strict database-first approach. All logic regarding constraints, cascading, streaks, and dynamic aggregate functionality is handled via Triggers and Stored Procedures.
-
-To initialize your local database:
-1. Ensure your local MySQL/MariaDB server is running.
-2. Run the `schema.sql` file provided in the repository root:
-   ```bash
-   mysql -u root -p < schema.sql
-   ```
-*(Replace `root` with your target username if different. The script provisions `cse3100_testA1` natively).*
 
