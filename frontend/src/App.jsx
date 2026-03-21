@@ -31,15 +31,17 @@ export default function App() {
       {isAuthenticated && !isWelcomeRoute && (
         <footer
           style={{
-            padding: "1.5rem",
-            borderTop: "1px solid #e5e7eb",
+            paddingTop: "1.5rem",
+            paddingBottom: "1.5rem",
+            borderTop: "1px solid #21262d",
             textAlign: "center",
-            fontSize: "0.875rem",
-            color: "#6b7280",
-            background: "#ffffff",
+            fontSize: "0.75rem",
+            color: "#475569",
+            fontFamily: "var(--font-sans, sans-serif)",
+            background: "#0d1117",
           }}
         >
-          © 2026 Lantern. All rights reserved.
+          © {new Date().getFullYear()} Lantern. All rights reserved.
         </footer>
       )}
     </div>
