@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UsersController;
+use App\Http\Controllers\WeeklyGoalController;
 
 Route::get('/health', fn () => response()->json(['status' => 'API working']));
 
@@ -18,6 +19,9 @@ Route::group([
 });
 
 Route::group(['middleware' => 'auth:api'], function () {
+    Route::patch('/weekly-goal', [WeeklyGoalController::class, 'updateWeeklyGoal']);
+    Route::patch('/weekly-goal/course/{courseId}', [WeeklyGoalController::class, 'updateCourseWeeklyGoal']);
+
     // Basic CRUD Operations for Database-First approach
     Route::apiResource('subjects', \App\Http\Controllers\SubjectController::class);
     Route::apiResource('courses', \App\Http\Controllers\CourseController::class);

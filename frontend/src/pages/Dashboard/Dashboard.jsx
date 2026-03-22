@@ -12,6 +12,9 @@ import "./Dashboard.css";
 ────────────────────────────────────────────────────────────────────────────── */
 
 export default function Dashboard() {
+  const DEFAULT_WEEKLY_GOAL_MINUTES = 1680; // 28h
+  const DEFAULT_COURSE_WEEKLY_GOAL_MINUTES = 600; // 10h
+
   const { user } = useAuth();
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +48,12 @@ export default function Dashboard() {
 
   // ── Mobile timer toggle ───────────────────────────────────────────────────────
   const [showTimer, setShowTimer] = useState(false);
+  const [weeklyGoalHoursInput, setWeeklyGoalHoursInput] = useState("28");
+  const [isSavingWeeklyGoal, setIsSavingWeeklyGoal] = useState(false);
+  const [courseWeeklyGoalHoursInput, setCourseWeeklyGoalHoursInput] = useState("10");
+  const [isSavingCourseWeeklyGoal, setIsSavingCourseWeeklyGoal] = useState(false);
+  const [savingCourseGoalId, setSavingCourseGoalId] = useState(null);
+  const [courseGoalInputs, setCourseGoalInputs] = useState({});
 
   // ─── Data Fetching ────────────────────────────────────────────────────────────
 
@@ -104,7 +113,14 @@ export default function Dashboard() {
       const subjectsData = subjects.map((subject) => {
         const subjectCourses = courses
           .filter((c) => c.subject_id === subject.id)
-          .map((c) => ({ ...c, tasks: tasks.filter((t) => t.course_id === c.id) }));
+          .map((c) => ({
+            ...c,
+            weekly_goal_minutes:
+              Number(c.weekly_goal_minutes) ||
+              Number(subject.weekly_goal_minutes) ||
+              DEFAULT_COURSE_WEEKLY_GOAL_MINUTES,
+            tasks: tasks.filter((t) => t.course_id === c.id),
+          }));
 
         let subjectStudyTimeThisWeekSeconds = 0;
         const normalizedCourses = subjectCourses.map((course) => {
@@ -120,6 +136,10 @@ export default function Dashboard() {
             weekly_progress_minutes: courseStudyTimeThisWeekSeconds / 60,
           };
         });
+        const computedSubjectGoalMinutes = normalizedCourses.reduce(
+          (sum, course) => sum + (Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES),
+          0
+        );
 
         let total = 0, done = 0;
         subjectCourses.forEach((c) => {
@@ -130,6 +150,10 @@ export default function Dashboard() {
         return {
           ...subject,
           weekly_progress_minutes: subjectStudyTimeThisWeekSeconds / 60,
+          weekly_goal_minutes:
+            computedSubjectGoalMinutes ||
+            Number(subject.weekly_goal_minutes) ||
+            DEFAULT_COURSE_WEEKLY_GOAL_MINUTES,
           total_tasks:             total,
           completed_tasks:         done,
           courses:                 normalizedCourses,
@@ -141,12 +165,22 @@ export default function Dashboard() {
         tasks_completed_today:        tasksCompletedToday,
         total_relevant_tasks:         (tasksCompletedToday + pendingTasks) || 1,
         study_streak:                 userInfo.current_streak || 0,
-        weekly_goal_minutes:          userInfo.weekly_goal_minutes || 1680,
+        weekly_goal_minutes:          userInfo.weekly_goal_minutes || DEFAULT_WEEKLY_GOAL_MINUTES,
         study_time_this_week_minutes: studyTimeThisWeekSeconds / 60,
         subjects:                     subjectsData,
       };
 
       setData(agg);
+      const nextCourseGoalInputs = {};
+      agg.subjects.forEach((subject) => {
+        subject.courses.forEach((course) => {
+          nextCourseGoalInputs[course.id.toString()] = (
+            (Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES) / 60
+          ).toString();
+        });
+      });
+      setCourseGoalInputs(nextCourseGoalInputs);
+      setWeeklyGoalHoursInput(((agg.weekly_goal_minutes || DEFAULT_WEEKLY_GOAL_MINUTES) / 60).toString());
 
       if (agg.subjects.length > 0 && !selectedCourse) {
         for (const s of agg.subjects) {
@@ -352,6 +386,89 @@ export default function Dashboard() {
   };
   const pct        = (a, b) => Math.min(100, b > 0 ? (a / b) * 100 : 0);
   const displayName = user?.name || user?.email?.split("@")[0] || "there";
+
+  const handleSaveWeeklyGoal = async () => {
+    const parsedHours = Number(weeklyGoalHoursInput);
+    if (!Number.isFinite(parsedHours) || parsedHours <= 0) {
+      alert("Please enter a valid weekly goal in hours.");
+      return;
+    }
+
+    const goalMinutes = Math.max(1, Math.round(parsedHours * 60));
+    try {
+      setIsSavingWeeklyGoal(true);
+      await api.patch("/weekly-goal", { weekly_goal_minutes: goalMinutes });
+      setData((prev) => (prev ? { ...prev, weekly_goal_minutes: goalMinutes } : prev));
+      setWeeklyGoalHoursInput((goalMinutes / 60).toString());
+    } catch (err) {
+      console.error("Failed to update weekly goal", err);
+      alert("Failed to update weekly goal.");
+    } finally {
+      setIsSavingWeeklyGoal(false);
+    }
+  };
+
+  const handleSaveCourseWeeklyGoal = async (courseId = selectedCourse, hoursInput = courseWeeklyGoalHoursInput) => {
+    const targetCourseId = courseId?.toString();
+    if (!targetCourseId) {
+      alert("Please select a course first.");
+      return;
+    }
+
+    const parsedHours = Number(hoursInput);
+    if (!Number.isFinite(parsedHours) || parsedHours <= 0) {
+      alert("Please enter a valid course weekly goal in hours.");
+      return;
+    }
+
+    const goalMinutes = Math.max(1, Math.round(parsedHours * 60));
+    try {
+      setIsSavingCourseWeeklyGoal(true);
+      setSavingCourseGoalId(targetCourseId);
+      await api.patch(`/weekly-goal/course/${targetCourseId}`, { weekly_goal_minutes: goalMinutes });
+
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          subjects: prev.subjects.map((subject) => {
+            const updatedCourses = subject.courses.map((course) => (
+              course.id.toString() === targetCourseId
+                ? { ...course, weekly_goal_minutes: goalMinutes }
+                : course
+            ));
+            const recomputedSubjectGoalMinutes = updatedCourses.reduce(
+              (sum, course) => sum + (Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES),
+              0
+            );
+            return {
+              ...subject,
+              courses: updatedCourses,
+              weekly_goal_minutes:
+                recomputedSubjectGoalMinutes ||
+                Number(subject.weekly_goal_minutes) ||
+                DEFAULT_COURSE_WEEKLY_GOAL_MINUTES,
+            };
+          }),
+        };
+      });
+      setCourseGoalInputs((prev) => ({
+        ...prev,
+        [targetCourseId]: (goalMinutes / 60).toString(),
+      }));
+      if (selectedCourse?.toString() === targetCourseId) {
+        setCourseWeeklyGoalHoursInput((goalMinutes / 60).toString());
+      }
+    } catch (err) {
+      console.error("Failed to update course weekly goal", err);
+      const backendMessage = err?.response?.data?.message;
+      alert(backendMessage || "Failed to update course weekly goal.");
+    } finally {
+      setIsSavingCourseWeeklyGoal(false);
+      setSavingCourseGoalId(null);
+    }
+  };
+
   const selectedCourseKey = selectedCourse?.toString();
   const activeSessionElapsedSeconds = isActive
     ? (timerMode === "stopwatch"
@@ -378,6 +495,13 @@ export default function Dashboard() {
   const selectedCourseDetails = subjectsForDisplay
     .flatMap((subject) => subject.courses.map((course) => ({ subject, course })))
     .find(({ course }) => course.id.toString() === selectedCourseKey);
+  const selectedCourseGoalMinutes = Number(selectedCourseDetails?.course?.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES;
+
+  useEffect(() => {
+    if (!selectedCourseDetails?.course) return;
+    setCourseWeeklyGoalHoursInput((selectedCourseGoalMinutes / 60).toString());
+  }, [selectedCourse, selectedCourseGoalMinutes]);
+
   const displayStudyTimeTodayMinutes = (data?.study_time_today_minutes || 0) + activeSessionElapsedMinutes;
   const displayStudyTimeThisWeekMinutes = (data?.study_time_this_week_minutes || 0) + activeSessionElapsedMinutes;
 
@@ -656,6 +780,25 @@ export default function Dashboard() {
           <div className="font-display text-xl sm:text-2xl lg:text-3xl font-bold text-slate-100 tracking-tight mb-3">
             {fmtHMS(displayStudyTimeThisWeekMinutes)}
           </div>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <input
+              type="number"
+              min="1"
+              step="0.5"
+              value={weeklyGoalHoursInput}
+              onChange={(e) => setWeeklyGoalHoursInput(e.target.value)}
+              className="font-sans w-16 sm:w-20 px-2 py-1 rounded border border-[#30363d] bg-[#0d1117] text-slate-200 text-xs"
+              aria-label="Weekly goal in hours"
+            />
+            <span className="font-sans text-[0.7rem] text-slate-500">hours</span>
+            <button
+              onClick={handleSaveWeeklyGoal}
+              disabled={isSavingWeeklyGoal}
+              className="font-sans text-xs font-semibold px-2.5 py-1 rounded border border-[#30363d] text-slate-300 hover:bg-[#21262d] disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+            >
+              {isSavingWeeklyGoal ? "Saving..." : "Save"}
+            </button>
+          </div>
           <div className="mt-auto">
             <div className="h-1.5 w-full bg-[#21262d] rounded-full overflow-hidden">
               <div
@@ -853,9 +996,41 @@ export default function Dashboard() {
             <div className="courses-list flex flex-col gap-4 sm:gap-5 max-h-[55vh] overflow-y-auto pr-1">
               {activeSubject.courses.map((course) => (
                 <div key={course.id} className="bg-[#0d1117] border border-[#21262d] rounded-xl p-4 sm:p-5">
-                  <h4 className="font-display text-sm font-bold text-slate-200 mb-3 sm:mb-4">
-                    {course.title}
-                  </h4>
+                  <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
+                    <h4 className="font-display text-sm font-bold text-slate-200 truncate">
+                      {course.title}
+                    </h4>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <input
+                        type="number"
+                        min="1"
+                        step="0.5"
+                        value={
+                          courseGoalInputs[course.id.toString()] ??
+                          ((Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES) / 60).toString()
+                        }
+                        onChange={(e) => setCourseGoalInputs((prev) => ({
+                          ...prev,
+                          [course.id.toString()]: e.target.value,
+                        }))}
+                        className="font-sans w-16 px-2 py-1 rounded border border-[#30363d] bg-[#161b22] text-slate-200 text-xs"
+                        aria-label={`${course.title} weekly goal in hours`}
+                      />
+                      <button
+                        onClick={() =>
+                          handleSaveCourseWeeklyGoal(
+                            course.id,
+                            courseGoalInputs[course.id.toString()] ??
+                              ((Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES) / 60).toString()
+                          )
+                        }
+                        disabled={isSavingCourseWeeklyGoal}
+                        className="font-sans text-xs font-semibold px-2.5 py-1 rounded border border-[#30363d] text-slate-300 hover:bg-[#21262d] disabled:opacity-50 disabled:cursor-not-allowed min-w-[56px]"
+                      >
+                        {savingCourseGoalId === course.id.toString() ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-2 sm:gap-3">
                     {course.tasks.map((task, idx) => (
                       <div
