@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "../../context/AuthContext";
 import api from "../../api/client";
 import confetti from "canvas-confetti";
 import "./Dashboard.css";
 
 export default function Dashboard() {
-  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,7 +83,7 @@ export default function Dashboard() {
 
       const subjectsData = subjects.map(subject => {
         const subjectCourses = courses.filter(c => c.subject_id === subject.id).map(course => {
-            const courseTasks = tasks.filter(t => t.course_id === course.id);
+            const courseTasks = sortTasksByDisplayOrder(tasks.filter(t => t.course_id === course.id));
             return { ...course, tasks: courseTasks };
         });
 
@@ -634,7 +632,7 @@ export default function Dashboard() {
                 <div key={course.id} className="course-block">
                   <h4 className="course-title">{course.title}</h4>
                   <div className="task-grid">
-                    {course.tasks.map((task, index) => (
+                    {course.tasks.map((task) => (
                       <div
                         key={task.id}
                         className={`task-block ${task.status === 'completed' ? 'completed' : 'pending'}`}
@@ -644,7 +642,7 @@ export default function Dashboard() {
                           }
                         }}
                       >
-                        {task.status === 'completed' ? '✓' : '◯'} Task {index + 1}
+                        {task.status === 'completed' ? '✓' : '◯'} {getTaskDisplayLabel(task)}
                       </div>
                     ))}
                     {course.tasks.length === 0 && <span className="text-gray-500 text-sm">No tasks</span>}
@@ -661,3 +659,34 @@ export default function Dashboard() {
     </div>
   );
 }
+
+function getTaskDisplayLabel(task) {
+  if (!task?.title) return "Untitled Task";
+
+  const numberedTaskMatch = task.title.match(/^Task\s+(\d+)\b/i);
+  if (numberedTaskMatch) {
+    return `Task ${numberedTaskMatch[1]}`;
+  }
+
+  return task.title;
+}
+
+function getTaskDisplayOrder(task) {
+  if (!task?.title) return Number.MAX_SAFE_INTEGER;
+
+  const numberedTaskMatch = task.title.match(/^Task\s+(\d+)\b/i);
+  if (numberedTaskMatch) {
+    return Number(numberedTaskMatch[1]);
+  }
+
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function sortTasksByDisplayOrder(taskList) {
+  return [...taskList].sort((left, right) => {
+    const orderDifference = getTaskDisplayOrder(left) - getTaskDisplayOrder(right);
+    if (orderDifference !== 0) return orderDifference;
+    return left.id - right.id;
+  });
+}
+
