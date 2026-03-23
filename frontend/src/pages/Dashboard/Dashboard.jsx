@@ -114,8 +114,8 @@ export default function Dashboard() {
 
       const subjectsData = subjects.map(subject => {
         const subjectCourses = courses.filter(c => c.subject_id === subject.id).map(course => {
-          const courseTasks = sortTasksByDisplayOrder(tasks.filter(t => t.course_id === course.id));
-          return { ...course, tasks: courseTasks };
+            const courseTasks = sortTasksByDisplayOrder(tasks.filter(t => t.course_id === course.id));
+            return { ...course, tasks: courseTasks };
         });
 
 
@@ -988,46 +988,11 @@ export default function Dashboard() {
               />
               <span className="truncate">{activeSubject.name} — Courses &amp; Tasks</span>
             </h2>
-
-            <div className="courses-list flex flex-col gap-4 sm:gap-5 max-h-[55vh] overflow-y-auto pr-1">
-              {activeSubject.courses.map((course) => (
-                <div key={course.id} className="bg-[#0d1117] border border-[#21262d] rounded-xl p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
-                    <h4 className="font-display text-sm font-bold text-slate-200 truncate">
-                      {course.title}
-                    </h4>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <input
-                        type="number"
-                        min="1"
-                        step="0.5"
-                        value={
-                          courseGoalInputs[course.id.toString()] ??
-                          ((Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES) / 60).toString()
-                        }
-                        onChange={(e) => setCourseGoalInputs((prev) => ({
-                          ...prev,
-                          [course.id.toString()]: e.target.value,
-                        }))}
-                        className="font-sans w-16 px-2 py-1 rounded border border-[#30363d] bg-[#161b22] text-slate-200 text-xs"
-                        aria-label={`${course.title} weekly goal in hours`}
-                      />
-                      <button
-                        onClick={() =>
-                          handleSaveCourseWeeklyGoal(
-                            course.id,
-                            courseGoalInputs[course.id.toString()] ??
-                            ((Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES) / 60).toString()
-                          )
-                        }
-                        disabled={isSavingCourseWeeklyGoal}
-                        className="font-sans text-xs font-semibold px-2.5 py-1 rounded border border-[#30363d] text-slate-300 hover:bg-[#21262d] disabled:opacity-50 disabled:cursor-not-allowed min-w-[56px]"
-                      >
-                        {savingCourseGoalId === course.id.toString() ? "Saving..." : "Save"}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-2 sm:gap-3">
+            <div className="courses-list">
+              {activeSubject.courses.map(course => (
+                <div key={course.id} className="course-block">
+                  <h4 className="course-title">{course.title}</h4>
+                  <div className="task-grid">
                     {course.tasks.map((task) => (
                       <div
                         key={task.id}
@@ -1093,3 +1058,5 @@ function sortTasksByDisplayOrder(taskList) {
     return left.id - right.id;
   });
 }
+}
+
