@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "../../context/AuthContext";
 import api from "../../api/client";
 import confetti from "canvas-confetti";
+import { useAuth } from "../../context/AuthContext";
 import "./Dashboard.css";
+
 
 /* ─── Animation delay sequence (ms) ──────────────────────────────────────────
    header → welcome    :   0
@@ -16,17 +17,17 @@ export default function Dashboard() {
   const DEFAULT_COURSE_WEEKLY_GOAL_MINUTES = 600; // 10h
 
   const { user } = useAuth();
-  const [data, setData]       = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [error, setError] = useState(null);
 
   // ── Modal state ──────────────────────────────────────────────────────────────
-  const [isModalOpen,    setIsModalOpen]    = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newCourseTitle, setNewCourseTitle] = useState("");
-  const [newTasksCount,  setNewTasksCount]  = useState(5);
-  const [isSubmitting,   setIsSubmitting]   = useState(false);
-  const [activeSubject,  setActiveSubject]  = useState(null);
+  const [newTasksCount, setNewTasksCount] = useState(5);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeSubject, setActiveSubject] = useState(null);
 
   // ── Timer state ──────────────────────────────────────────────────────────────
   const [timerMode, setTimerMode] = useState(
@@ -39,10 +40,10 @@ export default function Dashboard() {
     const saved = localStorage.getItem("timeLeft");
     return saved !== null ? parseInt(saved) : 25 * 60;
   });
-  const [isActive,       setIsActive]       = useState(() => localStorage.getItem("timerIsActive") === "true");
+  const [isActive, setIsActive] = useState(() => localStorage.getItem("timerIsActive") === "true");
   const [selectedCourse, setSelectedCourse] = useState(() => localStorage.getItem("selectedCourse") || "");
-  const [lastTickTime,   setLastTickTime]   = useState(() => parseInt(localStorage.getItem("lastTickTime")) || null);
-  const intervalRef  = useRef(null);
+  const [lastTickTime, setLastTickTime] = useState(() => parseInt(localStorage.getItem("lastTickTime")) || null);
+  const intervalRef = useRef(null);
   const startTimeRef = useRef(localStorage.getItem("timerStartTime") || null);
   const isPersistingSessionRef = useRef(false);
 
@@ -70,8 +71,8 @@ export default function Dashboard() {
 
       const userInfo = userRes.data;
       const subjects = subjectsRes.data;
-      const courses  = coursesRes.data;
-      const tasks    = tasksRes.data;
+      const courses = coursesRes.data;
+      const tasks = tasksRes.data;
       const sessions = sessionsRes.data;
 
       const today = new Date();
@@ -91,17 +92,17 @@ export default function Dashboard() {
         return Math.max(0, Math.round(fallbackMinutes * 60));
       };
 
-      let studyTimeTodaySeconds    = 0;
+      let studyTimeTodaySeconds = 0;
       let studyTimeThisWeekSeconds = 0;
       sessions.forEach((s) => {
         const t = new Date(s.start_time);
         const durationSeconds = getSessionDurationSeconds(s);
-        if (t >= today)       studyTimeTodaySeconds    += durationSeconds;
+        if (t >= today) studyTimeTodaySeconds += durationSeconds;
         if (t >= startOfWeek) studyTimeThisWeekSeconds += durationSeconds;
       });
 
       let tasksCompletedToday = 0;
-      let pendingTasks        = 0;
+      let pendingTasks = 0;
       tasks.forEach((t) => {
         if (t.status === "completed") {
           if (t.completed_at && new Date(t.completed_at) >= today) tasksCompletedToday++;
@@ -110,17 +111,13 @@ export default function Dashboard() {
         }
       });
 
-      const subjectsData = subjects.map((subject) => {
-        const subjectCourses = courses
-          .filter((c) => c.subject_id === subject.id)
-          .map((c) => ({
-            ...c,
-            weekly_goal_minutes:
-              Number(c.weekly_goal_minutes) ||
-              Number(subject.weekly_goal_minutes) ||
-              DEFAULT_COURSE_WEEKLY_GOAL_MINUTES,
-            tasks: tasks.filter((t) => t.course_id === c.id),
-          }));
+
+      const subjectsData = subjects.map(subject => {
+        const subjectCourses = courses.filter(c => c.subject_id === subject.id).map(course => {
+          const courseTasks = sortTasksByDisplayOrder(tasks.filter(t => t.course_id === course.id));
+          return { ...course, tasks: courseTasks };
+        });
+
 
         let subjectStudyTimeThisWeekSeconds = 0;
         const normalizedCourses = subjectCourses.map((course) => {
@@ -144,7 +141,7 @@ export default function Dashboard() {
         let total = 0, done = 0;
         subjectCourses.forEach((c) => {
           total += c.tasks.length;
-          done  += c.tasks.filter((t) => t.status === "completed").length;
+          done += c.tasks.filter((t) => t.status === "completed").length;
         });
 
         return {
@@ -154,20 +151,20 @@ export default function Dashboard() {
             computedSubjectGoalMinutes ||
             Number(subject.weekly_goal_minutes) ||
             DEFAULT_COURSE_WEEKLY_GOAL_MINUTES,
-          total_tasks:             total,
-          completed_tasks:         done,
-          courses:                 normalizedCourses,
+          total_tasks: total,
+          completed_tasks: done,
+          courses: normalizedCourses,
         };
       });
 
       const agg = {
-        study_time_today_minutes:     studyTimeTodaySeconds / 60,
-        tasks_completed_today:        tasksCompletedToday,
-        total_relevant_tasks:         (tasksCompletedToday + pendingTasks) || 1,
-        study_streak:                 userInfo.current_streak || 0,
-        weekly_goal_minutes:          userInfo.weekly_goal_minutes || DEFAULT_WEEKLY_GOAL_MINUTES,
+        study_time_today_minutes: studyTimeTodaySeconds / 60,
+        tasks_completed_today: tasksCompletedToday,
+        total_relevant_tasks: (tasksCompletedToday + pendingTasks) || 1,
+        study_streak: userInfo.current_streak || 0,
+        weekly_goal_minutes: userInfo.weekly_goal_minutes || DEFAULT_WEEKLY_GOAL_MINUTES,
         study_time_this_week_minutes: studyTimeThisWeekSeconds / 60,
-        subjects:                     subjectsData,
+        subjects: subjectsData,
       };
 
       setData(agg);
@@ -205,12 +202,12 @@ export default function Dashboard() {
   // ─── Timer Persistence ────────────────────────────────────────────────────────
 
   useEffect(() => {
-    localStorage.setItem("timerMode",        timerMode);
+    localStorage.setItem("timerMode", timerMode);
     localStorage.setItem("pomodoroDuration", pomodoroDuration.toString());
-    localStorage.setItem("timeLeft",         timeLeft.toString());
-    localStorage.setItem("timerIsActive",    isActive.toString());
-    localStorage.setItem("selectedCourse",   selectedCourse);
-    if (lastTickTime)         localStorage.setItem("lastTickTime",   lastTickTime.toString());
+    localStorage.setItem("timeLeft", timeLeft.toString());
+    localStorage.setItem("timerIsActive", isActive.toString());
+    localStorage.setItem("selectedCourse", selectedCourse);
+    if (lastTickTime) localStorage.setItem("lastTickTime", lastTickTime.toString());
     if (startTimeRef.current) localStorage.setItem("timerStartTime", startTimeRef.current);
   }, [timerMode, pomodoroDuration, timeLeft, isActive, selectedCourse, lastTickTime]);
 
@@ -313,11 +310,11 @@ export default function Dashboard() {
     try {
       const durationMinutes = Math.max(1, Math.floor(durationSeconds / 60));
       await api.post("/study-sessions", {
-        course_id:        selectedCourse,
+        course_id: selectedCourse,
         duration_minutes: durationMinutes,
-        start_time:       startTimeRef.current || new Date().toISOString(),
-        end_time:         new Date().toISOString(),
-        notes:            `Study session from Dashboard (${sessionMode})`,
+        start_time: startTimeRef.current || new Date().toISOString(),
+        end_time: new Date().toISOString(),
+        notes: `Study session from Dashboard (${sessionMode})`,
       });
 
       if (showCelebration) {
@@ -339,7 +336,7 @@ export default function Dashboard() {
     try {
       setIsSubmitting(true);
       const { data: { id: subjectId } } = await api.post("/subjects", { name: newSubjectName, color_code: "#cbd5e1" });
-      const { data: { id: courseId  } } = await api.post("/courses",  { subject_id: subjectId, title: newCourseTitle, description: "Dynamically added from dashboard" });
+      const { data: { id: courseId } } = await api.post("/courses", { subject_id: subjectId, title: newCourseTitle, description: "Dynamically added from dashboard" });
       await Promise.all(
         Array.from({ length: parseInt(newTasksCount) }, (_, i) =>
           api.post("/tasks", { course_id: courseId, title: `Task ${i + 1} for ${newCourseTitle}`, description: "Auto-generated task" })
@@ -373,7 +370,7 @@ export default function Dashboard() {
     return <>{m}<span className="opacity-40 mx-0.5">:</span>{s}</>;
   };
 
-  const fmtHM      = (min) => {
+  const fmtHM = (min) => {
     const totalMinutes = Math.floor(min || 0);
     return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
   };
@@ -384,7 +381,7 @@ export default function Dashboard() {
     const seconds = totalSeconds % 60;
     return `${hours}h ${minutes}m ${seconds}s`;
   };
-  const pct        = (a, b) => Math.min(100, b > 0 ? (a / b) * 100 : 0);
+  const pct = (a, b) => Math.min(100, b > 0 ? (a / b) * 100 : 0);
   const displayName = user?.name || user?.email?.split("@")[0] || "there";
 
   const handleSaveWeeklyGoal = async () => {
@@ -472,8 +469,8 @@ export default function Dashboard() {
   const selectedCourseKey = selectedCourse?.toString();
   const activeSessionElapsedSeconds = isActive
     ? (timerMode === "stopwatch"
-        ? Math.max(0, timeLeft)
-        : Math.max(0, pomodoroDuration * 60 - timeLeft))
+      ? Math.max(0, timeLeft)
+      : Math.max(0, pomodoroDuration * 60 - timeLeft))
     : 0;
   const activeSessionElapsedMinutes = activeSessionElapsedSeconds / 60;
 
@@ -545,7 +542,7 @@ export default function Dashboard() {
         {[...Array(4)].map((_, i) => (
           <div key={i} className="bg-[#161b22] border border-[#21262d] rounded-xl px-4 sm:px-6 py-4 sm:py-5 overflow-hidden relative">
             {/* colored top bar */}
-            <div className={`absolute top-0 left-0 w-full h-[3px] ${["bg-sky-400","bg-green-400","bg-yellow-400","bg-violet-400"][i]} opacity-40`} />
+            <div className={`absolute top-0 left-0 w-full h-[3px] ${["bg-sky-400", "bg-green-400", "bg-yellow-400", "bg-violet-400"][i]} opacity-40`} />
             <div className="skeleton h-2.5 w-24 mb-4 rounded" />
             <div className="skeleton h-8 w-20 mb-3 rounded-md" />
             <div className="skeleton h-2.5 w-28 rounded" />
@@ -626,11 +623,10 @@ export default function Dashboard() {
           <button
             key={mode}
             onClick={() => handleModeSwitch(mode)}
-            className={`font-sans flex-1 py-2 rounded-full text-xs font-semibold transition-all ${
-              timerMode === mode
+            className={`font-sans flex-1 py-2 rounded-full text-xs font-semibold transition-all ${timerMode === mode
                 ? "bg-slate-100 text-[#0d1117] shadow"
                 : "text-slate-500 hover:text-slate-300"
-            }`}
+              }`}
           >
             {mode.charAt(0).toUpperCase() + mode.slice(1)}
           </button>
@@ -741,17 +737,17 @@ export default function Dashboard() {
           {
             label: "Study Time Today",
             value: fmtHMS(displayStudyTimeTodayMinutes),
-            sub:   `Free time ${fmtHMS(Math.max(0, data.weekly_goal_minutes / 7 - displayStudyTimeTodayMinutes))}`,
+            sub: `Free time ${fmtHMS(Math.max(0, data.weekly_goal_minutes / 7 - displayStudyTimeTodayMinutes))}`,
           },
           {
             label: "Tasks Completed",
             value: `${data.tasks_completed_today}/${data.total_relevant_tasks}`,
-            sub:   `${Math.round(pct(data.tasks_completed_today, data.total_relevant_tasks))}% completion rate`,
+            sub: `${Math.round(pct(data.tasks_completed_today, data.total_relevant_tasks))}% completion rate`,
           },
           {
             label: "Study Streak",
             value: `${data.study_streak} days`,
-            sub:   "keep it up!",
+            sub: "keep it up!",
           },
         ].map(({ label, value, sub }, i) => (
           <div
@@ -1021,7 +1017,7 @@ export default function Dashboard() {
                           handleSaveCourseWeeklyGoal(
                             course.id,
                             courseGoalInputs[course.id.toString()] ??
-                              ((Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES) / 60).toString()
+                            ((Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES) / 60).toString()
                           )
                         }
                         disabled={isSavingCourseWeeklyGoal}
@@ -1032,7 +1028,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-2 sm:gap-3">
-                    {course.tasks.map((task, idx) => (
+                    {course.tasks.map((task) => (
                       <div
                         key={task.id}
                         onClick={() => task.status !== "completed" && handleCompleteTask(task.id)}
@@ -1042,7 +1038,7 @@ export default function Dashboard() {
                             : "bg-[#161b22] border border-[#30363d] text-slate-400 cursor-pointer hover:border-sky-400 hover:text-sky-400 hover:bg-sky-400/10 hover:-translate-y-0.5"
                           }`}
                       >
-                        {task.status === "completed" ? "✓" : "◯"} Task {idx + 1}
+                        {task.status === 'completed' ? '✓' : '◯'} {getTaskDisplayLabel(task)}
                       </div>
                     ))}
                     {course.tasks.length === 0 && (
@@ -1066,4 +1062,34 @@ export default function Dashboard() {
       )}
     </div>
   );
+}
+
+function getTaskDisplayLabel(task) {
+  if (!task?.title) return "Untitled Task";
+
+  const numberedTaskMatch = task.title.match(/^Task\s+(\d+)\b/i);
+  if (numberedTaskMatch) {
+    return `Task ${numberedTaskMatch[1]}`;
+  }
+
+  return task.title;
+}
+
+function getTaskDisplayOrder(task) {
+  if (!task?.title) return Number.MAX_SAFE_INTEGER;
+
+  const numberedTaskMatch = task.title.match(/^Task\s+(\d+)\b/i);
+  if (numberedTaskMatch) {
+    return Number(numberedTaskMatch[1]);
+  }
+
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function sortTasksByDisplayOrder(taskList) {
+  return [...taskList].sort((left, right) => {
+    const orderDifference = getTaskDisplayOrder(left) - getTaskDisplayOrder(right);
+    if (orderDifference !== 0) return orderDifference;
+    return left.id - right.id;
+  });
 }
