@@ -1,0 +1,29 @@
+/* Intentional basic/raw styles for the achievement page */
+.ugly-page {
+    padding: 20px;
+    background-color: #fff;
+    color: #000;
+    font-family: monospace;
+}
+
+.ugly-card {
+    border: 2px solid #000;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+
+.ugly-card h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+.ugly-card.unlocked {
+    border-color: green;
+    background-color: #e6ffe6;
+}
+
+.ugly-card.locked {
+    border-color: red;
+    background-color: #ffe6e6;
+}

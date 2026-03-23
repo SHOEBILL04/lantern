@@ -1,22 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../api/client';
+import './Achievements.css'; // basic css
 
 export default function Achievements() {
-    return (
-        <div style={pageContainerStyle}>
-            <h1 style={titleStyle}>Achievements</h1>
-            <p style={subtitleStyle}>View the milestones and badges you've unlocked over time.</p>
+    const [achievements, setAchievements] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-            <div style={cardStyle}>
-                <div style={emptyStateStyle}>
-                    <p>Complete tasks to start earning achievements!</p>
-                </div>
+    useEffect(() => {
+        api.get('/achievements')
+            .then(res => {
+                setAchievements(res.data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error(err);
+                setLoading(false);
+            });
+    }, []);
+
+    if (loading) return <div>loading...</div>;
+
+    return (
+        <div className="ugly-page">
+            <h1>Achievements (Backend Data Dump)</h1>
+            <hr />
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {achievements.map((a) => (
+                    <div key={a.id} className={`ugly-card ${a.is_unlocked ? 'unlocked' : 'locked'}`}>
+                        <h2>
+                            [{a.is_unlocked ? 'X' : ' '}] {a.name}
+                        </h2>
+                        <p>{a.description}</p>
+                        <div>
+                            <strong>Status:</strong> {a.is_unlocked ? 'Unlocked' : 'Locked'} <br />
+                            <strong>Progress:</strong> {a.current_value} / {a.requirement_value} ({Math.round(a.progress_percent)}%) <br />
+                            <strong>Type:</strong> {a.requirement_type}
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
 }
-
-const pageContainerStyle = { padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column' };
-const titleStyle = { fontSize: '2rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' };
-const subtitleStyle = { fontSize: '1rem', color: '#6b7280', marginBottom: '2rem' };
-const cardStyle = { background: '#ffffff', borderRadius: '0.5rem', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', flex: 1, padding: '2rem' };
-const emptyStateStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af', fontStyle: 'italic' };

@@ -35,6 +35,9 @@ Route::group(['middleware' => 'auth:api'], function () {
     // Habits CRUD
     Route::apiResource('habits', \App\Http\Controllers\HabitController::class)->except(['show', 'update']);
     Route::post('habits/{habit}/track', [\App\Http\Controllers\HabitController::class, 'track']);
+
+    // Achievements
+    Route::get('/achievements', [\App\Http\Controllers\AchievementController::class, 'index']);
 });
 
 // items (can later be protected by JWT middleware)
