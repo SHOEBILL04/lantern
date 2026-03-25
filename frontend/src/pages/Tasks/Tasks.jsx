@@ -15,6 +15,9 @@ export default function Tasks() {
     const [updateText, setUpdateText] = useState('');
     const [loading, setLoading] = useState(false);
 
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [editTitleText, setEditTitleText] = useState('');
+
     useEffect(() => {
         fetchCoursesAndSubjects();
     }, []);
@@ -82,8 +85,25 @@ export default function Tasks() {
         try {
             const res = await api.get(`${ENDPOINTS.TASKS}/${id}`);
             setSelectedTask(res.data);
+            setEditTitleText(res.data.title);
+            setIsEditingTitle(false);
         } catch (error) {
             console.error('Error fetching task details:', error);
+        }
+    };
+
+    const handleTitleSave = async () => {
+        if (!editTitleText.trim() || editTitleText === selectedTask.title) {
+            setIsEditingTitle(false);
+            return;
+        }
+        try {
+            const res = await api.patch(`${ENDPOINTS.TASKS}/${selectedTask.id}`, { title: editTitleText });
+            setSelectedTask({ ...selectedTask, title: res.data.title });
+            setIsEditingTitle(false);
+            fetchTasks(); 
+        } catch (err) {
+            console.error('Error updating title:', err);
         }
     };
 
@@ -277,7 +297,23 @@ export default function Tasks() {
                 <div style={styles.modalOverlay}>
                     <div style={styles.modalDetailContent}>
                         <div style={styles.detailHeader}>
-                            <h2 style={styles.modalTitle}>{selectedTask.title}</h2>
+                            {isEditingTitle ? (
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '1.5rem', width: '100%' }}>
+                                    <input 
+                                        style={{ ...styles.formInput, padding: '0.5rem', fontSize: '1.25rem', fontWeight: 'bold' }}
+                                        value={editTitleText}
+                                        onChange={(e) => setEditTitleText(e.target.value)}
+                                        autoFocus
+                                    />
+                                    <button onClick={handleTitleSave} style={{ ...styles.primaryButton, padding: '0.5rem 1rem' }}>Save</button>
+                                    <button onClick={() => setIsEditingTitle(false)} style={{ ...styles.secondaryButton, padding: '0.5rem 1rem' }}>Cancel</button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                    <h2 style={styles.modalTitle}>{selectedTask.title}</h2>
+                                    <button onClick={() => setIsEditingTitle(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: '#4f46e5', marginBottom: '1.5rem' }}>✎</button>
+                                </div>
+                            )}
                             <button style={styles.closeButton} onClick={() => setSelectedTask(null)}>&times;</button>
                         </div>
                         <div style={styles.badgeRow}>

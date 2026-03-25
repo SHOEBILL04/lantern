@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Services\AchievementService;
 
 class TaskController extends Controller
 {
@@ -65,7 +66,7 @@ class TaskController extends Controller
         return response()->json($task);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id, AchievementService $achievementService)
     {
         $task = DB::table('tasks')->where('user_id', auth()->id())->where('id', $id)->first();
         if (!$task) return response()->json(['message' => 'Not found'], 404);
@@ -89,10 +90,17 @@ class TaskController extends Controller
         if ($request->has('description')) $updateData['description'] = $request->description;
         if ($request->has('due_date')) $updateData['due_date'] = $request->due_date;
         
+        $newlyUnlocked = [];
         if ($request->has('status')) {
             $updateData['status'] = $request->status;
             if ($request->status === 'completed' && !$task->completed_at) {
                 $updateData['completed_at'] = now();
+                
+                // Trigger achievement check
+                $user = auth()->user();
+                if ($user) {
+                    $newlyUnlocked = $achievementService->checkAndAwardAchievements($user, 'tasks_completed');
+                }
             } elseif ($request->status !== 'completed') {
                 $updateData['completed_at'] = null;
             }
@@ -100,7 +108,10 @@ class TaskController extends Controller
 
         DB::table('tasks')->where('id', $id)->update($updateData);
 
-        return response()->json(DB::table('tasks')->find($id));
+        $responseTask = DB::table('tasks')->find($id);
+        $responseTask->newly_unlocked = $newlyUnlocked;
+
+        return response()->json($responseTask);
     }
 
     public function destroy($id)
@@ -130,7 +141,7 @@ class TaskController extends Controller
         return response()->json(DB::table('task_updates')->find($updateId), 201);
     }
 
-    public function completeTask($id)
+    public function completeTask($id, AchievementService $achievementService)
     {
         $task = DB::table('tasks')->where('user_id', auth()->id())->where('id', $id)->first();
         if (!$task) return response()->json(['message' => 'Not found'], 404);
@@ -143,6 +154,17 @@ class TaskController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Task marked as completed', 'task' => DB::table('tasks')->find($id)]);
+        $user = auth()->user();
+        if ($user) {
+            $newlyUnlocked = $achievementService->checkAndAwardAchievements($user, 'tasks_completed');
+        } else {
+            $newlyUnlocked = [];
+        }
+
+        return response()->json([
+            'message' => 'Task marked as completed', 
+            'task' => DB::table('tasks')->find($id),
+            'newly_unlocked' => $newlyUnlocked
+        ]);
     }
 }
