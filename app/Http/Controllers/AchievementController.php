@@ -28,10 +28,13 @@ class AchievementController extends Controller
         $habitsCompleted = HabitTracker::whereHas('habit', function($query) use ($user) {
             $query->where('user_id', $user->id);
         })->where('is_completed', true)->count();
+
+        $studyMinutes = $user->studySessions()->sum('duration_minutes');
         
         $stats = [
             'tasks_completed' => $tasksCompleted,
             'habits_completed' => $habitsCompleted,
+            'study_minutes' => $studyMinutes,
         ];
 
         $response = $achievements->map(function ($achievement) use ($user, $stats) {

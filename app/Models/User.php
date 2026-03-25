@@ -91,6 +91,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Habit::class);
     }
 
+    public function notes()
+    {
+        return $this->hasMany(Note::class);
+    }
+
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *

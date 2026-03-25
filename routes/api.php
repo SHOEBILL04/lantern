@@ -38,6 +38,9 @@ Route::group(['middleware' => 'auth:api'], function () {
 
     // Achievements
     Route::get('/achievements', [\App\Http\Controllers\AchievementController::class, 'index']);
+
+    // Notes
+    Route::apiResource('notes', \App\Http\Controllers\NoteController::class)->except(['show', 'update']);
 });
 
 // items (can later be protected by JWT middleware)
