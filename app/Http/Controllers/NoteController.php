@@ -55,7 +55,6 @@ class NoteController extends Controller
             return response()->json(['message' => 'Not found'], 404);
         }
 
-        // Delete associated file if it exists
         if ($note->file_path) {
             Storage::disk('public')->delete($note->file_path);
         }
