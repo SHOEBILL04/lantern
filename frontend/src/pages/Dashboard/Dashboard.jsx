@@ -34,15 +34,15 @@ export default function Dashboard() {
     () => localStorage.getItem("timerMode") || "pomodoro"
   );
   const [pomodoroDuration, setPomodoroDuration] = useState(
-    () => parseInt(localStorage.getItem("pomodoroDuration")) || 25
+    () => parseInt(localStorage.getItem("pomodoroDuration"), 10) || 25
   );
   const [timeLeft, setTimeLeft] = useState(() => {
     const saved = localStorage.getItem("timeLeft");
-    return saved !== null ? parseInt(saved) : 25 * 60;
+    return saved !== null ? parseInt(saved, 10) : 25 * 60;
   });
   const [isActive, setIsActive] = useState(() => localStorage.getItem("timerIsActive") === "true");
   const [selectedCourse, setSelectedCourse] = useState(() => localStorage.getItem("selectedCourse") || "");
-  const [lastTickTime, setLastTickTime] = useState(() => parseInt(localStorage.getItem("lastTickTime")) || null);
+  const [lastTickTime, setLastTickTime] = useState(() => parseInt(localStorage.getItem("lastTickTime"), 10) || null);
   const intervalRef = useRef(null);
   const startTimeRef = useRef(localStorage.getItem("timerStartTime") || null);
   const isPersistingSessionRef = useRef(false);
@@ -51,10 +51,8 @@ export default function Dashboard() {
   const [showTimer, setShowTimer] = useState(false);
   const [weeklyGoalHoursInput, setWeeklyGoalHoursInput] = useState("28");
   const [isSavingWeeklyGoal, setIsSavingWeeklyGoal] = useState(false);
-  const [courseWeeklyGoalHoursInput, setCourseWeeklyGoalHoursInput] = useState("10");
-  const [isSavingCourseWeeklyGoal, setIsSavingCourseWeeklyGoal] = useState(false);
-  const [savingCourseGoalId, setSavingCourseGoalId] = useState(null);
   const [courseGoalInputs, setCourseGoalInputs] = useState({});
+  const [savingCourseGoalId, setSavingCourseGoalId] = useState(null);
 
   // ─── Data Fetching ────────────────────────────────────────────────────────────
 
@@ -79,7 +77,8 @@ export default function Dashboard() {
       today.setHours(0, 0, 0, 0);
 
       const startOfWeek = new Date();
-      startOfWeek.setDate(startOfWeek.getDate() - Math.max(0, startOfWeek.getDay() - 1));
+      const daysSinceMonday = (startOfWeek.getDay() + 6) % 7;
+      startOfWeek.setDate(startOfWeek.getDate() - daysSinceMonday);
       startOfWeek.setHours(0, 0, 0, 0);
 
       const getSessionDurationSeconds = (session) => {
@@ -168,6 +167,7 @@ export default function Dashboard() {
       };
 
       setData(agg);
+      setWeeklyGoalHoursInput(((agg.weekly_goal_minutes || DEFAULT_WEEKLY_GOAL_MINUTES) / 60).toString());
       const nextCourseGoalInputs = {};
       agg.subjects.forEach((subject) => {
         subject.courses.forEach((course) => {
@@ -177,12 +177,18 @@ export default function Dashboard() {
         });
       });
       setCourseGoalInputs(nextCourseGoalInputs);
-      setWeeklyGoalHoursInput(((agg.weekly_goal_minutes || DEFAULT_WEEKLY_GOAL_MINUTES) / 60).toString());
 
-      if (agg.subjects.length > 0 && !selectedCourse) {
-        for (const s of agg.subjects) {
-          if (s.courses.length > 0) { setSelectedCourse(s.courses[0].id); break; }
-        }
+      const courseStillExists = agg.subjects.some((subject) =>
+        subject.courses.some((course) => course.id.toString() === selectedCourse?.toString())
+      );
+      const firstAvailableCourseId = agg.subjects
+        .flatMap((subject) => subject.courses)
+        .find((course) => course?.id !== undefined)
+        ?.id
+        ?.toString();
+
+      if (firstAvailableCourseId && !courseStillExists) {
+        setSelectedCourse(firstAvailableCourseId);
       }
       if (activeSubject) {
         const updated = agg.subjects.find((s) => s.id === activeSubject.id);
@@ -206,9 +212,11 @@ export default function Dashboard() {
     localStorage.setItem("pomodoroDuration", pomodoroDuration.toString());
     localStorage.setItem("timeLeft", timeLeft.toString());
     localStorage.setItem("timerIsActive", isActive.toString());
-    localStorage.setItem("selectedCourse", selectedCourse);
+    localStorage.setItem("selectedCourse", selectedCourse ? selectedCourse.toString() : "");
     if (lastTickTime) localStorage.setItem("lastTickTime", lastTickTime.toString());
+    else localStorage.removeItem("lastTickTime");
     if (startTimeRef.current) localStorage.setItem("timerStartTime", startTimeRef.current);
+    else localStorage.removeItem("timerStartTime");
   }, [timerMode, pomodoroDuration, timeLeft, isActive, selectedCourse, lastTickTime]);
 
   // Background catch-up
@@ -292,7 +300,7 @@ export default function Dashboard() {
   };
 
   const handleChangePomodoroDuration = (e) => {
-    const val = parseInt(e.target.value) || 1;
+    const val = parseInt(e.target.value, 10) || 1;
     setPomodoroDuration(val);
     if (timerMode === "pomodoro" && !isActive) setTimeLeft(val * 60);
   };
@@ -338,7 +346,7 @@ export default function Dashboard() {
       const { data: { id: subjectId } } = await api.post("/subjects", { name: newSubjectName, color_code: "#cbd5e1" });
       const { data: { id: courseId } } = await api.post("/courses", { subject_id: subjectId, title: newCourseTitle, description: "Dynamically added from dashboard" });
       await Promise.all(
-        Array.from({ length: parseInt(newTasksCount) }, (_, i) =>
+        Array.from({ length: parseInt(newTasksCount, 10) }, (_, i) =>
           api.post("/tasks", { course_id: courseId, title: `Task ${i + 1} for ${newCourseTitle}`, description: "Auto-generated task" })
         )
       );
@@ -370,10 +378,6 @@ export default function Dashboard() {
     return <>{m}<span className="opacity-40 mx-0.5">:</span>{s}</>;
   };
 
-  const fmtHM = (min) => {
-    const totalMinutes = Math.floor(min || 0);
-    return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
-  };
   const fmtHMS = (min) => {
     const totalSeconds = Math.max(0, Math.floor((min || 0) * 60));
     const hours = Math.floor(totalSeconds / 3600);
@@ -405,14 +409,32 @@ export default function Dashboard() {
     }
   };
 
-  const handleSaveCourseWeeklyGoal = async (courseId = selectedCourse, hoursInput = courseWeeklyGoalHoursInput) => {
-    const targetCourseId = courseId?.toString();
-    if (!targetCourseId) {
-      alert("Please select a course first.");
-      return;
-    }
+  const applyCourseGoalUpdate = (subjects, targetCourseId, goalMinutes) =>
+    subjects.map((subject) => {
+      const updatedCourses = subject.courses.map((course) => (
+        course.id.toString() === targetCourseId
+          ? { ...course, weekly_goal_minutes: goalMinutes }
+          : course
+      ));
+      const recomputedSubjectGoalMinutes = updatedCourses.reduce(
+        (sum, course) => sum + (Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES),
+        0
+      );
+      return {
+        ...subject,
+        courses: updatedCourses,
+        weekly_goal_minutes:
+          recomputedSubjectGoalMinutes ||
+          Number(subject.weekly_goal_minutes) ||
+          DEFAULT_COURSE_WEEKLY_GOAL_MINUTES,
+      };
+    });
 
-    const parsedHours = Number(hoursInput);
+  const handleSaveCourseWeeklyGoal = async (courseId) => {
+    const targetCourseId = courseId?.toString();
+    if (!targetCourseId) return;
+
+    const parsedHours = Number(courseGoalInputs[targetCourseId]);
     if (!Number.isFinite(parsedHours) || parsedHours <= 0) {
       alert("Please enter a valid course weekly goal in hours.");
       return;
@@ -420,48 +442,29 @@ export default function Dashboard() {
 
     const goalMinutes = Math.max(1, Math.round(parsedHours * 60));
     try {
-      setIsSavingCourseWeeklyGoal(true);
       setSavingCourseGoalId(targetCourseId);
       await api.patch(`/weekly-goal/course/${targetCourseId}`, { weekly_goal_minutes: goalMinutes });
 
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          subjects: prev.subjects.map((subject) => {
-            const updatedCourses = subject.courses.map((course) => (
-              course.id.toString() === targetCourseId
-                ? { ...course, weekly_goal_minutes: goalMinutes }
-                : course
-            ));
-            const recomputedSubjectGoalMinutes = updatedCourses.reduce(
-              (sum, course) => sum + (Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES),
-              0
-            );
-            return {
-              ...subject,
-              courses: updatedCourses,
-              weekly_goal_minutes:
-                recomputedSubjectGoalMinutes ||
-                Number(subject.weekly_goal_minutes) ||
-                DEFAULT_COURSE_WEEKLY_GOAL_MINUTES,
-            };
-          }),
-        };
-      });
       setCourseGoalInputs((prev) => ({
         ...prev,
         [targetCourseId]: (goalMinutes / 60).toString(),
       }));
-      if (selectedCourse?.toString() === targetCourseId) {
-        setCourseWeeklyGoalHoursInput((goalMinutes / 60).toString());
-      }
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          subjects: applyCourseGoalUpdate(prev.subjects, targetCourseId, goalMinutes),
+        };
+      });
+      setActiveSubject((prev) => {
+        if (!prev) return prev;
+        return applyCourseGoalUpdate([prev], targetCourseId, goalMinutes)[0];
+      });
     } catch (err) {
       console.error("Failed to update course weekly goal", err);
       const backendMessage = err?.response?.data?.message;
       alert(backendMessage || "Failed to update course weekly goal.");
     } finally {
-      setIsSavingCourseWeeklyGoal(false);
       setSavingCourseGoalId(null);
     }
   };
@@ -488,16 +491,6 @@ export default function Dashboard() {
       )),
     };
   });
-
-  const selectedCourseDetails = subjectsForDisplay
-    .flatMap((subject) => subject.courses.map((course) => ({ subject, course })))
-    .find(({ course }) => course.id.toString() === selectedCourseKey);
-  const selectedCourseGoalMinutes = Number(selectedCourseDetails?.course?.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES;
-
-  useEffect(() => {
-    if (!selectedCourseDetails?.course) return;
-    setCourseWeeklyGoalHoursInput((selectedCourseGoalMinutes / 60).toString());
-  }, [selectedCourse, selectedCourseGoalMinutes]);
 
   const displayStudyTimeTodayMinutes = (data?.study_time_today_minutes || 0) + activeSessionElapsedMinutes;
   const displayStudyTimeThisWeekMinutes = (data?.study_time_this_week_minutes || 0) + activeSessionElapsedMinutes;
@@ -991,7 +984,48 @@ export default function Dashboard() {
             <div className="courses-list">
               {activeSubject.courses.map(course => (
                 <div key={course.id} className="course-block">
-                  <h4 className="course-title">{course.title}</h4>
+                  <div className="course-header">
+                    <h4 className="course-title">{course.title}</h4>
+                    <div className="course-goal-editor">
+                      <span className="course-goal-label">Weekly Goal</span>
+                      <input
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        value={
+                          courseGoalInputs[course.id.toString()] ??
+                          ((Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES) / 60).toString()
+                        }
+                        onChange={(e) =>
+                          setCourseGoalInputs((prev) => ({
+                            ...prev,
+                            [course.id.toString()]: e.target.value,
+                          }))
+                        }
+                        className="course-goal-input"
+                        aria-label={`Weekly goal in hours for ${course.title}`}
+                      />
+                      <span className="course-goal-unit">h</span>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveCourseWeeklyGoal(course.id)}
+                        disabled={savingCourseGoalId === course.id.toString()}
+                        className="course-goal-save"
+                      >
+                        {savingCourseGoalId === course.id.toString() ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="course-progress-row">
+                    <span>Progress</span>
+                    <span>{fmtHMS(course.weekly_progress_minutes)}/{fmtHMS(course.weekly_goal_minutes)}</span>
+                  </div>
+                  <div className="course-progress-track">
+                    <div
+                      className="course-progress-fill"
+                      style={{ width: `${pct(course.weekly_progress_minutes, course.weekly_goal_minutes)}%` }}
+                    />
+                  </div>
                   <div className="task-grid">
                     {course.tasks.map((task) => (
                       <div
@@ -1055,8 +1089,11 @@ function sortTasksByDisplayOrder(taskList) {
   return [...taskList].sort((left, right) => {
     const orderDifference = getTaskDisplayOrder(left) - getTaskDisplayOrder(right);
     if (orderDifference !== 0) return orderDifference;
-    return left.id - right.id;
+    const leftId = Number(left.id);
+    const rightId = Number(right.id);
+    if (Number.isFinite(leftId) && Number.isFinite(rightId)) {
+      return leftId - rightId;
+    }
+    return String(left.id ?? "").localeCompare(String(right.id ?? ""));
   });
 }
-
-

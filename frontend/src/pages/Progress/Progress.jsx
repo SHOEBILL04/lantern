@@ -1,19 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../api/client';
 import { ENDPOINTS } from '../../api/endpoints';
+import './Progress.css';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function Progress() {
-    const [subjects, setSubjects] = useState([]);
-    const [courses, setCourses] = useState([]);
-    const [tasks, setTasks] = useState([]);
-    const [sessions, setSessions] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [subjects, setSubjects]   = useState([]);
+    const [courses,  setCourses]    = useState([]);
+    const [tasks,    setTasks]      = useState([]);
+    const [sessions, setSessions]   = useState([]);
+    const [loading,  setLoading]    = useState(true);
+    const [expandedSubjects, setExpandedSubjects] = useState({});
 
-    useEffect(() => {
-        fetchProgressData();
-    }, []);
+    useEffect(() => { fetchProgressData(); }, []);
 
     const fetchProgressData = async () => {
         setLoading(true);
@@ -24,524 +24,351 @@ export default function Progress() {
                 api.get(ENDPOINTS.TASKS),
                 api.get('/study-sessions'),
             ]);
-
             setSubjects(subjectsRes.data || []);
-            setCourses(coursesRes.data || []);
-            setTasks(tasksRes.data || []);
+            setCourses(coursesRes.data  || []);
+            setTasks(tasksRes.data      || []);
             setSessions(sessionsRes.data || []);
-        } catch (error) {
-            console.error('Failed to load progress data:', error);
+        } catch (err) {
+            console.error('Failed to load progress data:', err);
         } finally {
             setLoading(false);
         }
     };
 
     const weekRange = useMemo(() => {
-        const now = new Date();
+        const now   = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const start = new Date(today);
-        const daysSinceSaturday = (today.getDay() + 1) % 7;
-        start.setDate(today.getDate() - daysSinceSaturday);
-
-        return Array.from({ length: 7 }, (_, index) => {
+        const daysSinceMonday = (today.getDay() + 6) % 7;
+        start.setDate(today.getDate() - daysSinceMonday);
+        return Array.from({ length: 7 }, (_, i) => {
             const date = new Date(start);
-            date.setDate(start.getDate() + index);
-            return {
-                key: formatDateKey(date),
-                label: DAY_LABELS[date.getDay()],
-                fullLabel: date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }),
-                date,
-            };
+            date.setDate(start.getDate() + i);
+            return { key: formatDateKey(date), label: DAY_LABELS[date.getDay()] };
         });
     }, []);
 
-    const courseMap = useMemo(() => {
-        return courses.reduce((acc, course) => {
-            acc[course.id] = course;
-            return acc;
-        }, {});
-    }, [courses]);
+    const courseMap = useMemo(() =>
+        courses.reduce((acc, c) => { acc[c.id] = c; return acc; }, {}),
+    [courses]);
 
     const subjectNameByCourseId = useMemo(() => {
         const map = {};
-        courses.forEach((course) => {
-            const subject = subjects.find((item) => item.id === course.subject_id);
-            if (subject) {
-                map[course.id] = subject.name;
-            }
+        courses.forEach((c) => {
+            const subj = subjects.find((s) => s.id === c.subject_id);
+            if (subj) map[c.id] = subj.name;
         });
         return map;
     }, [courses, subjects]);
 
     const weeklyStudyData = useMemo(() => {
-        const minutesByDay = weekRange.reduce((acc, day) => {
-            acc[day.key] = 0;
-            return acc;
-        }, {});
-
-        sessions.forEach((session) => {
-            const sessionDate = formatDateKey(new Date(session.start_time));
-            if (minutesByDay[sessionDate] !== undefined) {
-                minutesByDay[sessionDate] += session.duration_minutes;
-            }
+        const minutesByDay = weekRange.reduce((acc, d) => { acc[d.key] = 0; return acc; }, {});
+        sessions.forEach((s) => {
+            const key = formatDateKey(new Date(s.start_time));
+            if (minutesByDay[key] !== undefined) minutesByDay[key] += s.duration_minutes;
         });
-
-        const maxMinutes = Math.max(...Object.values(minutesByDay), 1);
-
+        const maxMin = Math.max(...Object.values(minutesByDay), 1);
         return weekRange.map((day) => {
             const minutes = minutesByDay[day.key] || 0;
-            return {
-                ...day,
-                minutes,
-                hoursLabel: formatHours(minutes),
-                percent: Math.max((minutes / maxMinutes) * 100, minutes > 0 ? 10 : 0),
-            };
+            return { ...day, minutes, hoursLabel: formatHours(minutes),
+                percent: Math.max((minutes / maxMin) * 100, minutes > 0 ? 5 : 0) };
         });
     }, [sessions, weekRange]);
 
-    const totalWeekMinutes = useMemo(() => {
-        return weeklyStudyData.reduce((sum, day) => sum + day.minutes, 0);
-    }, [weeklyStudyData]);
+    const totalWeekMinutes = useMemo(() => weeklyStudyData.reduce((s, d) => s + d.minutes, 0), [weeklyStudyData]);
+    const activeDays       = useMemo(() => weeklyStudyData.filter((d) => d.minutes > 0).length, [weeklyStudyData]);
+    const completedCount   = useMemo(() => tasks.filter((t) => t.status === 'completed').length, [tasks]);
+    const totalCount       = tasks.length;
+    const taskPercent      = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    const todayKey         = formatDateKey(new Date());
 
-    const subjectTaskProgress = useMemo(() => {
-        return subjects.map((subject) => {
-            const subjectCourseIds = courses
-                .filter((course) => course.subject_id === subject.id)
-                .map((course) => course.id);
-
-            const subjectTasks = tasks.filter((task) => {
-                if (task.subject && task.subject.trim().toLowerCase() === subject.name.trim().toLowerCase()) {
-                    return true;
-                }
-
-                return subjectCourseIds.includes(task.course_id);
-            });
-
-            const completedTasks = subjectTasks.filter((task) => task.status === 'completed');
-
-            return {
-                ...subject,
-                totalTasks: subjectTasks.length,
-                completedTasks,
-                completedCount: completedTasks.length,
-                completionPercent: subjectTasks.length > 0 ? (completedTasks.length / subjectTasks.length) * 100 : 0,
-            };
-        });
-    }, [subjects, courses, tasks]);
-
-    if (loading) {
-        return (
-            <div style={styles.page}>
-                <h1 style={styles.title}>Progress Tracker</h1>
-                <p style={styles.subtitle}>Loading your study progress...</p>
-            </div>
+    const subjectTaskProgress = useMemo(() => subjects.map((subject) => {
+        const ids = courses.filter((c) => c.subject_id === subject.id).map((c) => c.id);
+        const subjectTasks = tasks.filter((t) =>
+            (t.subject && t.subject.trim().toLowerCase() === subject.name.trim().toLowerCase()) ||
+            ids.includes(t.course_id)
         );
-    }
+        const completedTasks = subjectTasks.filter((t) => t.status === 'completed');
+        return { ...subject, totalTasks: subjectTasks.length, completedTasks,
+            completedCount: completedTasks.length,
+            completionPercent: subjectTasks.length > 0 ? (completedTasks.length / subjectTasks.length) * 100 : 0 };
+    }), [subjects, courses, tasks]);
 
-    return (
-        <div style={styles.page}>
-            <div style={styles.hero}>
-                <div>
-                    <h1 style={styles.title}>Progress Tracker</h1>
-                    <p style={styles.subtitle}>See weekly study time from the dashboard timer and completed tasks by subject.</p>
-                </div>
-                <div style={styles.heroStats}>
-                    <div style={styles.statCard}>
-                        <span style={styles.statLabel}>This week</span>
-                        <strong style={styles.statValue}>{formatHours(totalWeekMinutes)}</strong>
-                    </div>
-                    <div style={styles.statCard}>
-                        <span style={styles.statLabel}>Completed tasks</span>
-                        <strong style={styles.statValue}>{tasks.filter((task) => task.status === 'completed').length}</strong>
-                    </div>
-                </div>
+    const toggleSubject = (id) =>
+        setExpandedSubjects((prev) => ({ ...prev, [id]: !prev[id] }));
+
+    /* ─── SKELETON LOADER ─────────────────────── */
+    if (loading) return (
+        <div className="dashboard-root font-sans pt-page">
+            <style>{`
+                @keyframes shimmer {
+                    0%   { background-position: -600px 0; }
+                    100% { background-position:  600px 0; }
+                }
+                .skeleton {
+                    background: linear-gradient(90deg, #161b22 25%, #1e2530 50%, #161b22 75%);
+                    background-size: 600px 100%;
+                    animation: shimmer 1.6s infinite linear;
+                    border-radius: 6px;
+                }
+            `}</style>
+
+            {/* Header */}
+            <div className="pt-sk-header">
+                <div className="skeleton" style={{ height: '2.4rem', width: '16rem', marginBottom: '0.6rem', borderRadius: 8 }} />
+                <div className="skeleton" style={{ height: '0.85rem', width: '22rem', maxWidth: '100%', borderRadius: 4 }} />
             </div>
 
-            <div style={styles.stack}>
-                <section style={{ ...styles.panel, ...styles.topPanel }}>
-                    <div style={styles.panelHeader}>
-                        <div>
-                            <h2 style={styles.panelTitle}>Weekly Study Time</h2>
-                            <p style={styles.panelSubtitle}>Hours spent studying each day of this week.</p>
+            {/* Stat cards */}
+            <div className="pt-stat-row">
+                {[0, 1, 2].map((i) => (
+                    <div key={i} className="pt-stat-card" style={{ pointerEvents: 'none' }}>
+                        <div className={`pt-sk-accent pt-sk-accent-${i}`} />
+                        <div className="skeleton" style={{ width: 40, height: 40, borderRadius: '0.6rem', flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                            <div className="skeleton" style={{ height: '0.6rem', width: '7rem', marginBottom: '0.65rem', borderRadius: 4 }} />
+                            <div className="skeleton" style={{ height: '1.6rem', width: '5rem', borderRadius: 6 }} />
                         </div>
                     </div>
+                ))}
+            </div>
 
-                    {sessions.length === 0 ? (
-                        <div style={styles.emptyState}>No study sessions tracked yet. Use the dashboard timer to start logging study time.</div>
-                    ) : (
-                        <div style={styles.weeklyCard}>
-                            <div style={styles.weeklySummaryRow}>
-                                <div style={styles.weeklySummaryBlock}>
-                                    <span style={styles.weeklySummaryLabel}>Total this week</span>
-                                    <strong style={styles.weeklySummaryValue}>{formatHours(totalWeekMinutes)}</strong>
-                                </div>
-                                <div style={styles.weeklySummaryBlock}>
-                                    <span style={styles.weeklySummaryLabel}>Active days</span>
-                                    <strong style={styles.weeklySummaryValue}>
-                                        {weeklyStudyData.filter((day) => day.minutes > 0).length}/7
-                                    </strong>
-                                </div>
+            {/* Chart panel */}
+            <div className="pt-panel pt-chart-panel">
+                <div className="skeleton" style={{ height: '1rem', width: '11rem', marginBottom: '0.55rem' }} />
+                <div className="skeleton" style={{ height: '0.75rem', width: '9rem', marginBottom: '1.5rem' }} />
+                <div className="pt-bar-chart">
+                    <div className="pt-bar-chart__bars">
+                        {[55, 100, 12, 0, 38, 0, 0].map((h, i) => (
+                            <div key={i} className="pt-bar-col">
+                                <div className="skeleton pt-bar-track" style={{ height: `${Math.max(h, 8)}%`, flex: 'none' }} />
+                                <div className="skeleton pt-bar-day-box" style={{ border: 'none' }} />
                             </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
 
-                            <div style={styles.weeklyGrid}>
-                                {weeklyStudyData.map((day) => (
-                                    <div key={day.key} style={styles.dayTile}>
-                                        <div style={styles.dayTileHeader}>
-                                            <span style={styles.dayLabel}>{day.label}</span>
-                                            <span style={styles.dayFullLabel}>{day.fullLabel}</span>
+            {/* Subject list panel */}
+            <div className="pt-panel">
+                <div className="skeleton" style={{ height: '1rem', width: '11rem', marginBottom: '0.55rem' }} />
+                <div className="skeleton" style={{ height: '0.75rem', width: '9rem', marginBottom: '1.5rem' }} />
+                {[...Array(3)].map((_, i) => (
+                    <div key={i} className="pt-subject-card" style={{ marginBottom: '0.6rem', padding: '0.9rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', pointerEvents: 'none' }}>
+                        <div className="skeleton" style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0 }} />
+                        <div className="skeleton" style={{ height: '0.8rem', width: `${[130, 95, 115][i]}px`, borderRadius: 4 }} />
+                        <div style={{ flex: 1 }} />
+                        <div className="skeleton" style={{ height: 5, width: 80, borderRadius: 999 }} />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    /* ─── MAIN RENDER ──────────────────────────── */
+    return (
+        <div className="dashboard-root pt-page font-sans">
+
+            {/* Header */}
+            <header className="pt-header anim-section" style={{ '--delay': '0ms' }}>
+                <h1 className="font-display pt-title">Progress Tracker</h1>
+                <p className="font-sans pt-subtitle">Your weekly study insights and task completion at a glance.</p>
+            </header>
+
+            {/* Stat Cards */}
+            <div className="pt-stat-row anim-section" style={{ '--delay': '60ms' }}>
+
+                <div className="stat-card stat-card-anim pt-stat-card" style={{ '--card-delay': '80ms' }}>
+                    <div className="pt-stat-icon pt-stat-icon--blue">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="font-sans pt-stat-label">STUDY TIME THIS WEEK</p>
+                        <div className="pt-stat-value-row">
+                            <strong className="font-display pt-stat-value">{formatHours(totalWeekMinutes)}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="stat-card stat-card-anim pt-stat-card" style={{ '--card-delay': '130ms' }}>
+                    <div className="pt-stat-icon pt-stat-icon--green">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="font-sans pt-stat-label">TASKS COMPLETED</p>
+                        <div className="pt-stat-value-row">
+                            <strong className="font-display pt-stat-value">{completedCount}/{totalCount}</strong>
+                            <span className="font-sans pt-stat-note">{taskPercent}% done</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="stat-card stat-card-anim pt-stat-card" style={{ '--card-delay': '180ms' }}>
+                    <div className="pt-stat-icon pt-stat-icon--yellow">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="font-sans pt-stat-label">ACTIVE DAYS</p>
+                        <div className="pt-stat-value-row">
+                            <strong className="font-display pt-stat-value">{activeDays}/7</strong>
+                            <span className="font-sans pt-stat-note">days this week</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            {/* Weekly Bar Chart */}
+            <section className="pt-panel pt-chart-panel anim-section" style={{ '--delay': '280ms' }}>
+                <div className="pt-panel-header">
+                    <h2 className="font-display pt-panel-title">Weekly Study Time</h2>
+                    <p className="font-sans pt-panel-sub">Hours studied each day this week.</p>
+                </div>
+
+                {sessions.length === 0 ? (
+                    <div className="pt-empty font-sans">No study sessions tracked yet. Use the dashboard timer to start logging study time.</div>
+                ) : (
+                    <div className="pt-bar-chart">
+                        <div className="pt-bar-chart__bars">
+                            {weeklyStudyData.map((day) => {
+                                const isToday = day.key === todayKey;
+                                return (
+                                    <div key={day.key} className={`pt-bar-col${isToday ? ' pt-bar-col--today' : ''}`}>
+                                        <span className="font-sans pt-bar-label-top">
+                                            {day.minutes > 0 ? day.hoursLabel : ''}
+                                        </span>
+                                        <div className="pt-bar-track">
+                                            <div
+                                                className={`pt-bar-fill${day.minutes > 0 ? ' pt-bar-fill--active' : ''}${isToday ? ' pt-bar-fill--today' : ''}`}
+                                                style={{ height: `${day.percent}%` }}
+                                            />
                                         </div>
-                                        <div style={styles.dayValueOrb}>
-                                            <strong style={styles.dayValue}>{day.hoursLabel}</strong>
-                                            <span style={styles.dayValueHint}>
-                                                {day.minutes > 0 ? `${day.minutes} min studied` : 'No study time'}
+                                        <div className={`pt-bar-day-box${isToday ? ' pt-bar-day-box--today' : ''}`}>
+                                            <span className={`font-sans pt-bar-day-name${isToday ? ' pt-bar-day-name--today' : ''}`}>
+                                                {day.label}
+                                            </span>
+                                            <span className="font-sans pt-bar-day-min">
+                                                {day.minutes > 0 ? `${day.minutes}m` : '—'}
                                             </span>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </section>
-
-                <section style={styles.panel}>
-                    <div style={styles.panelHeader}>
-                        <div>
-                            <h2 style={styles.panelTitle}>Task Complete Tracker</h2>
-                            <p style={styles.panelSubtitle}>Completed tasks grouped by subject.</p>
+                                );
+                            })}
                         </div>
                     </div>
+                )}
+            </section>
 
-                    {subjects.length === 0 ? (
-                        <div style={styles.emptyState}>No subjects added yet.</div>
-                    ) : (
-                        <div style={styles.subjectList}>
-                            {subjectTaskProgress.map((subject) => (
-                                <article key={subject.id} style={styles.subjectCard}>
-                                    <div style={styles.subjectHeader}>
-                                        <div style={styles.subjectTitleRow}>
-                                            <span style={{ ...styles.subjectDot, backgroundColor: subject.color_code || '#94a3b8' }} />
-                                            <h3 style={styles.subjectTitle}>{subject.name}</h3>
+            {/* Task Complete Tracker */}
+            <section className="pt-panel anim-section" style={{ '--delay': '360ms' }}>
+                <div className="pt-panel-header">
+                    <h2 className="font-display pt-panel-title">Task Complete Tracker</h2>
+                    <p className="font-sans pt-panel-sub">Completed tasks grouped by subject.</p>
+                </div>
+
+                {subjects.length === 0 ? (
+                    <div className="pt-empty font-sans">No subjects added yet.</div>
+                ) : (
+                    <div className="pt-subject-list">
+                        {subjectTaskProgress.map((subject, idx) => {
+                            const isOpen = expandedSubjects[subject.id] === true;
+                            return (
+                                <article
+                                    key={subject.id}
+                                    className="subject-card-anim pt-subject-card"
+                                    style={{ '--subject-delay': `${380 + idx * 60}ms` }}
+                                >
+                                    <button
+                                        className="pt-subject-header"
+                                        onClick={() => toggleSubject(subject.id)}
+                                        aria-expanded={isOpen}
+                                    >
+                                        <div className="pt-subject-title-row">
+                                            <span
+                                                className="pt-subject-dot"
+                                                style={{ backgroundColor: subject.completedCount > 0 ? (subject.color_code || '#4ade80') : '#374151' }}
+                                            />
+                                            <span className="font-display pt-subject-name">{subject.name}</span>
+                                            <svg
+                                                className={`pt-chevron${isOpen ? ' pt-chevron--open' : ''}`}
+                                                width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" strokeWidth="2.5"
+                                                strokeLinecap="round" strokeLinejoin="round"
+                                            >
+                                                <polyline points="6 9 12 15 18 9"/>
+                                            </svg>
                                         </div>
-                                        <span style={styles.subjectMeta}>
-                                            {subject.completedCount}/{subject.totalTasks || 0} done
-                                        </span>
-                                    </div>
-
-                                    <div style={styles.progressTrack}>
-                                        <div style={{ ...styles.progressFill, width: `${subject.completionPercent}%` }} />
-                                    </div>
-
-                                    {subject.completedCount === 0 ? (
-                                        <p style={styles.subjectEmpty}>No completed tasks yet for this subject.</p>
-                                    ) : (
-                                        <div style={styles.completedTaskList}>
-                                            {subject.completedTasks.map((task) => (
-                                                <div key={task.id} style={styles.completedTaskItem}>
-                                                    <div>
-                                                        <strong style={styles.completedTaskTitle}>{task.title}</strong>
-                                                        <p style={styles.completedTaskMeta}>
-                                                            {courseMap[task.course_id]?.title || subjectNameByCourseId[task.course_id] || 'Study task'}
-                                                        </p>
-                                                    </div>
-                                                    <span style={styles.completedBadge}>Completed</span>
+                                        <div className="pt-subject-right">
+                                            {subject.completedCount > 0 ? (
+                                                <div className="pt-subject-progress-bar">
+                                                    <div
+                                                        className="pt-subject-progress-fill progress-fill"
+                                                        style={{
+                                                            width: `${subject.completionPercent}%`,
+                                                            backgroundColor: subject.color_code || '#4ade80',
+                                                        }}
+                                                    />
                                                 </div>
-                                            ))}
+                                            ) : (
+                                                <span className="font-sans pt-subject-count">
+                                                    {subject.completedCount}/{subject.totalTasks}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </button>
+
+                                    {isOpen && (
+                                        <div className="pt-task-list">
+                                            {subject.completedCount === 0 ? (
+                                                <p className="font-sans pt-task-empty">No completed tasks yet.</p>
+                                            ) : (
+                                                subject.completedTasks.map((task) => (
+                                                    <div key={task.id} className="pt-task-item">
+                                                        <span className="pt-task-dot" style={{ backgroundColor: subject.color_code || '#4ade80' }} />
+                                                        <div className="pt-task-info">
+                                                            <strong className="font-sans pt-task-title">{task.title}</strong>
+                                                            <p className="font-sans pt-task-meta">
+                                                                {courseMap[task.course_id]?.title || subjectNameByCourseId[task.course_id] || 'Study task'}
+                                                            </p>
+                                                        </div>
+                                                        <span className="font-sans pt-done-badge">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="20 6 9 17 4 12"/>
+                                                            </svg>
+                                                            Done
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            )}
                                         </div>
                                     )}
                                 </article>
-                            ))}
-                        </div>
-                    )}
-                </section>
-            </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </section>
+
         </div>
     );
 }
 
 function formatDateKey(date) {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const y = date.getFullYear();
+    const m = `${date.getMonth() + 1}`.padStart(2, '0');
+    const d = `${date.getDate()}`.padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
 function formatHours(minutes) {
-    const hours = minutes / 60;
-    if (hours === 0) return '0h';
-    if (hours < 1) return `${minutes}m`;
-    return `${hours.toFixed(hours % 1 === 0 ? 0 : 1)}h`;
+    const h = minutes / 60;
+    if (h === 0) return '0h';
+    if (h < 1)   return `${minutes}m`;
+    return `${h.toFixed(h % 1 === 0 ? 0 : 1)}h`;
 }
-
-const styles = {
-    page: {
-        minHeight: '100vh',
-        padding: '2rem',
-        background: 'linear-gradient(180deg, #f8fafc 0%, #eef6ff 100%)',
-        color: '#0f172a',
-    },
-    hero: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        gap: '1rem',
-        marginBottom: '1.75rem',
-        flexWrap: 'wrap',
-    },
-    title: {
-        fontSize: '2.4rem',
-        fontWeight: 800,
-        margin: 0,
-        letterSpacing: '-0.04em',
-    },
-    subtitle: {
-        margin: '0.5rem 0 0',
-        color: '#475569',
-        fontSize: '1rem',
-        maxWidth: '58rem',
-    },
-    heroStats: {
-        display: 'flex',
-        gap: '0.9rem',
-        flexWrap: 'wrap',
-    },
-    statCard: {
-        minWidth: '160px',
-        padding: '1rem 1.1rem',
-        borderRadius: '1rem',
-        background: 'linear-gradient(135deg, #0f172a 0%, #2563eb 100%)',
-        color: '#f8fafc',
-        boxShadow: '0 20px 40px rgba(37, 99, 235, 0.18)',
-    },
-    statLabel: {
-        display: 'block',
-        fontSize: '0.75rem',
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
-        color: 'rgba(255,255,255,0.7)',
-        marginBottom: '0.35rem',
-    },
-    statValue: {
-        fontSize: '1.6rem',
-        fontWeight: 800,
-    },
-    grid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '1.5rem',
-    },
-    stack: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem',
-    },
-    panel: {
-        padding: '1.25rem',
-        borderRadius: '1.5rem',
-        background: 'rgba(255,255,255,0.9)',
-        border: '1px solid rgba(148, 163, 184, 0.2)',
-        boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08)',
-        backdropFilter: 'blur(10px)',
-    },
-    topPanel: {
-        maxWidth: '100%',
-    },
-    panelHeader: {
-        marginBottom: '1.1rem',
-    },
-    panelTitle: {
-        margin: 0,
-        fontSize: '1.25rem',
-        fontWeight: 700,
-    },
-    panelSubtitle: {
-        margin: '0.35rem 0 0',
-        color: '#64748b',
-        fontSize: '0.92rem',
-    },
-    weeklyCard: {
-        padding: '1.1rem',
-        borderRadius: '1.25rem',
-        background: 'linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%)',
-        border: '1px solid #dbeafe',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
-    },
-    weeklySummaryRow: {
-        display: 'flex',
-        gap: '0.85rem',
-        marginBottom: '1rem',
-        flexWrap: 'wrap',
-    },
-    weeklySummaryBlock: {
-        minWidth: '160px',
-        padding: '0.9rem 1rem',
-        borderRadius: '1rem',
-        background: 'rgba(255,255,255,0.72)',
-        border: '1px solid rgba(191, 219, 254, 0.95)',
-    },
-    weeklySummaryLabel: {
-        display: 'block',
-        fontSize: '0.78rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        color: '#64748b',
-        marginBottom: '0.25rem',
-    },
-    weeklySummaryValue: {
-        fontSize: '1.35rem',
-        fontWeight: 800,
-        color: '#0f172a',
-    },
-    weeklyGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-        gap: '0.75rem',
-        overflowX: 'auto',
-        paddingBottom: '0.25rem',
-    },
-    dayTile: {
-        minWidth: '120px',
-        padding: '0.9rem 0.95rem',
-        borderRadius: '1rem',
-        background: 'rgba(255,255,255,0.7)',
-        border: '1px solid rgba(191, 219, 254, 0.9)',
-        boxShadow: '0 14px 30px rgba(59, 130, 246, 0.08)',
-    },
-    dayTileHeader: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.18rem',
-        marginBottom: '1rem',
-    },
-    dayValueOrb: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '124px',
-        padding: '1rem 0.75rem',
-        borderRadius: '1rem',
-        background: 'radial-gradient(circle at top, rgba(191, 219, 254, 0.95) 0%, rgba(239, 246, 255, 0.9) 52%, rgba(255,255,255,0.95) 100%)',
-        border: '1px solid rgba(191, 219, 254, 0.95)',
-    },
-    dayLabel: {
-        fontWeight: 800,
-        color: '#0f172a',
-        letterSpacing: '-0.02em',
-    },
-    dayFullLabel: {
-        fontSize: '0.78rem',
-        color: '#64748b',
-    },
-    dayValue: {
-        fontSize: '1.35rem',
-        fontWeight: 800,
-        color: '#1d4ed8',
-        lineHeight: 1,
-    },
-    dayValueHint: {
-        marginTop: '0.5rem',
-        fontSize: '0.76rem',
-        color: '#64748b',
-        textAlign: 'center',
-        lineHeight: 1.35,
-    },
-    subjectList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem',
-    },
-    subjectCard: {
-        padding: '1rem',
-        borderRadius: '1.1rem',
-        background: '#f8fafc',
-        border: '1px solid #e2e8f0',
-    },
-    subjectHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '0.75rem',
-        marginBottom: '0.75rem',
-        flexWrap: 'wrap',
-    },
-    subjectTitleRow: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.6rem',
-    },
-    subjectDot: {
-        width: '0.8rem',
-        height: '0.8rem',
-        borderRadius: '999px',
-        flexShrink: 0,
-    },
-    subjectTitle: {
-        margin: 0,
-        fontSize: '1rem',
-        fontWeight: 700,
-    },
-    subjectMeta: {
-        color: '#475569',
-        fontSize: '0.84rem',
-        fontWeight: 600,
-    },
-    progressTrack: {
-        height: '0.7rem',
-        borderRadius: '999px',
-        background: '#dbeafe',
-        overflow: 'hidden',
-        marginBottom: '0.85rem',
-    },
-    progressFill: {
-        height: '100%',
-        borderRadius: '999px',
-        background: 'linear-gradient(90deg, #22c55e 0%, #16a34a 100%)',
-    },
-    completedTaskList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.65rem',
-    },
-    completedTaskItem: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '0.75rem',
-        alignItems: 'center',
-        padding: '0.8rem 0.9rem',
-        borderRadius: '0.9rem',
-        background: '#ffffff',
-        border: '1px solid #dcfce7',
-    },
-    completedTaskTitle: {
-        display: 'block',
-        color: '#0f172a',
-        marginBottom: '0.15rem',
-    },
-    completedTaskMeta: {
-        margin: 0,
-        fontSize: '0.8rem',
-        color: '#64748b',
-    },
-    completedBadge: {
-        padding: '0.35rem 0.65rem',
-        borderRadius: '999px',
-        background: '#dcfce7',
-        color: '#166534',
-        fontSize: '0.74rem',
-        fontWeight: 700,
-        whiteSpace: 'nowrap',
-    },
-    subjectEmpty: {
-        margin: 0,
-        color: '#64748b',
-        fontSize: '0.9rem',
-    },
-    emptyState: {
-        padding: '1.2rem',
-        borderRadius: '1rem',
-        background: '#f8fafc',
-        border: '1px dashed #cbd5e1',
-        color: '#64748b',
-        textAlign: 'center',
-    },
-};
