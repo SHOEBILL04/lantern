@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { ENDPOINTS } from '../../api/endpoints';
+import './Tasks.css';
 
 export default function Tasks() {
     const [tasks, setTasks] = useState([]);
@@ -101,7 +102,7 @@ export default function Tasks() {
             const res = await api.patch(`${ENDPOINTS.TASKS}/${selectedTask.id}`, { title: editTitleText });
             setSelectedTask({ ...selectedTask, title: res.data.title });
             setIsEditingTitle(false);
-            fetchTasks(); 
+            fetchTasks();
         } catch (err) {
             console.error('Error updating title:', err);
         }
@@ -112,7 +113,7 @@ export default function Tasks() {
         try {
             const res = await api.patch(`${ENDPOINTS.TASKS}/${selectedTask.id}`, { status: newStatus });
             setSelectedTask({ ...selectedTask, status: res.data.status, completed_at: res.data.completed_at });
-            fetchTasks(); // Refresh list to reflect changes
+            fetchTasks();
         } catch (err) {
             console.error('Error updating status:', err);
         }
@@ -153,42 +154,42 @@ export default function Tasks() {
     }
 
     return (
-        <div style={styles.pageContainer}>
-            <div style={styles.header}>
+        <div className="tasks-page">
+            <div className="tasks-hero">
                 <div>
-                    <h1 style={styles.title}>Tasks</h1>
-                    <p style={styles.subtitle}>Track and manage your daily assignments.</p>
+                    <h1 className="tasks-title">Tasks</h1>
+                    <p className="tasks-subtitle">Track and manage your daily assignments.</p>
                 </div>
-                <button style={styles.primaryButton} onClick={() => setIsCreateModalOpen(true)}>
+                <button className="tasks-primary-btn" onClick={() => setIsCreateModalOpen(true)}>
                     + New Task
                 </button>
             </div>
 
-            <div style={styles.tabsContainer}>
+            <div className="tasks-tabs">
                 <button
-                    style={viewMode === 'active' ? styles.activeTab : styles.inactiveTab}
+                    className={`tasks-tab ${viewMode === 'active' ? 'tasks-tab--active' : ''}`}
                     onClick={() => setViewMode('active')}
                 >
                     Active Tasks
                 </button>
                 <button
-                    style={viewMode === 'archive' ? styles.activeTab : styles.inactiveTab}
+                    className={`tasks-tab ${viewMode === 'archive' ? 'tasks-tab--active' : ''}`}
                     onClick={() => setViewMode('archive')}
                 >
                     Archive
                 </button>
             </div>
 
-            <div style={styles.filterContainer}>
+            <div className="tasks-filters">
                 <input
                     type="text"
                     placeholder="Filter by Subject"
-                    style={styles.input}
+                    className="tasks-input"
                     value={filters.subject}
                     onChange={e => setFilters({ ...filters, subject: e.target.value })}
                 />
                 <select
-                    style={styles.select}
+                    className="tasks-select"
                     value={filters.priority}
                     onChange={e => setFilters({ ...filters, priority: e.target.value })}
                 >
@@ -199,7 +200,7 @@ export default function Tasks() {
                 </select>
                 {viewMode === 'active' && (
                     <select
-                        style={styles.select}
+                        className="tasks-select"
                         value={filters.status}
                         onChange={e => setFilters({ ...filters, status: e.target.value })}
                     >
@@ -210,31 +211,33 @@ export default function Tasks() {
                 )}
                 <input
                     type="date"
-                    style={styles.input}
+                    className="tasks-input"
                     value={filters.due_date}
                     onChange={e => setFilters({ ...filters, due_date: e.target.value })}
                 />
             </div>
 
-            <div style={styles.gridContainer}>
+            <div className="tasks-grid">
                 {loading ? (
-                    <p style={styles.emptyState}>Loading tasks...</p>
+                    <p className="tasks-empty">Loading tasks...</p>
                 ) : tasks.length === 0 ? (
-                    <div style={styles.cardStyle}>
-                        <div style={styles.emptyState}>
-                            <p>No tasks found matching your criteria.</p>
-                        </div>
+                    <div className="tasks-empty-card">
+                        <p>No tasks found matching your criteria.</p>
                     </div>
                 ) : (
                     tasks.map(task => (
-                        <div key={task.id} style={styles.taskCard} onClick={() => openTaskDetails(task.id)}>
-                            <div style={styles.taskHeader}>
-                                <span style={styles.priorityBadge(task.priority)}>{task.priority || 'none'}</span>
-                                <span style={styles.statusBadge(task.status)}>{task.status.replace('_', ' ')}</span>
+                        <div key={task.id} className="tasks-card" onClick={() => openTaskDetails(task.id)}>
+                            <div className="tasks-card-header">
+                                <span className={`tasks-badge tasks-badge--priority tasks-badge--${task.priority || 'none'}`}>
+                                    {task.priority || 'none'}
+                                </span>
+                                <span className={`tasks-badge tasks-badge--status tasks-badge--${task.status}`}>
+                                    {task.status.replace('_', ' ')}
+                                </span>
                             </div>
-                            <h3 style={styles.taskTitle}>{task.title}</h3>
-                            <p style={styles.taskSubject}>{task.subject ? task.subject : 'General'}</p>
-                            {task.due_date && <p style={styles.taskDate}>Due: {task.due_date}</p>}
+                            <h3 className="tasks-card-title">{task.title}</h3>
+                            <p className="tasks-card-subject">{task.subject ? task.subject : 'General'}</p>
+                            {task.due_date && <p className="tasks-card-date">Due: {task.due_date}</p>}
                         </div>
                     ))
                 )}
@@ -242,13 +245,13 @@ export default function Tasks() {
 
             {/* Create Task Modal */}
             {isCreateModalOpen && (
-                <div style={styles.modalOverlay}>
-                    <div style={styles.modalContent}>
-                        <h2 style={styles.modalTitle}>Create New Task</h2>
-                        <form onSubmit={handleCreateTask} style={styles.formContainer}>
+                <div className="tasks-modal-overlay">
+                    <div className="tasks-modal">
+                        <h2 className="tasks-modal-title">Create New Task</h2>
+                        <form onSubmit={handleCreateTask} className="tasks-form">
                             <select
                                 required
-                                style={styles.formInput}
+                                className="tasks-form-input"
                                 value={newTask.course_id}
                                 onChange={e => setNewTask({ ...newTask, course_id: e.target.value })}
                             >
@@ -258,15 +261,15 @@ export default function Tasks() {
                                 ))}
                             </select>
                             <input
-                                required placeholder="Task Title" style={styles.formInput}
+                                required placeholder="Task Title" className="tasks-form-input"
                                 value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })}
                             />
                             <input
-                                placeholder="Subject (Optional)" style={styles.formInput}
+                                placeholder="Subject (Optional)" className="tasks-form-input"
                                 value={newTask.subject} onChange={e => setNewTask({ ...newTask, subject: e.target.value })}
                             />
                             <select
-                                style={styles.formInput}
+                                className="tasks-form-input"
                                 value={newTask.priority}
                                 onChange={e => setNewTask({ ...newTask, priority: e.target.value })}
                             >
@@ -275,17 +278,17 @@ export default function Tasks() {
                                 <option value="high">High Priority</option>
                             </select>
                             <input
-                                type="date" style={styles.formInput}
+                                type="date" className="tasks-form-input"
                                 value={newTask.due_date} onChange={e => setNewTask({ ...newTask, due_date: e.target.value })}
                             />
                             <textarea
-                                placeholder="Description" rows="3" style={styles.formInput}
+                                placeholder="Description" rows="3" className="tasks-form-input"
                                 value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })}
                             ></textarea>
 
-                            <div style={styles.modalActions}>
-                                <button type="button" style={styles.secondaryButton} onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
-                                <button type="submit" style={styles.primaryButton}>Save Task</button>
+                            <div className="tasks-modal-actions">
+                                <button type="button" className="tasks-secondary-btn" onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
+                                <button type="submit" className="tasks-primary-btn">Save Task</button>
                             </div>
                         </form>
                     </div>
@@ -294,32 +297,37 @@ export default function Tasks() {
 
             {/* Task Details Modal */}
             {selectedTask && (
-                <div style={styles.modalOverlay}>
-                    <div style={styles.modalDetailContent}>
-                        <div style={styles.detailHeader}>
+                <div className="tasks-modal-overlay">
+                    <div className="tasks-modal tasks-modal--detail">
+                        <div className="tasks-detail-header">
                             {isEditingTitle ? (
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '1.5rem', width: '100%' }}>
-                                    <input 
-                                        style={{ ...styles.formInput, padding: '0.5rem', fontSize: '1.25rem', fontWeight: 'bold' }}
+                                <div className="tasks-detail-title-edit">
+                                    <input
+                                        className="tasks-form-input tasks-title-input"
                                         value={editTitleText}
                                         onChange={(e) => setEditTitleText(e.target.value)}
                                         autoFocus
                                     />
-                                    <button onClick={handleTitleSave} style={{ ...styles.primaryButton, padding: '0.5rem 1rem' }}>Save</button>
-                                    <button onClick={() => setIsEditingTitle(false)} style={{ ...styles.secondaryButton, padding: '0.5rem 1rem' }}>Cancel</button>
+                                    <button onClick={handleTitleSave} className="tasks-primary-btn tasks-btn-compact">Save</button>
+                                    <button onClick={() => setIsEditingTitle(false)} className="tasks-secondary-btn tasks-btn-compact">Cancel</button>
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                    <h2 style={styles.modalTitle}>{selectedTask.title}</h2>
-                                    <button onClick={() => setIsEditingTitle(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: '#4f46e5', marginBottom: '1.5rem' }}>✎</button>
+                                <div className="tasks-detail-title">
+                                    <h2 className="tasks-modal-title">{selectedTask.title}</h2>
+                                    <button onClick={() => setIsEditingTitle(true)} className="tasks-edit-btn" aria-label="Edit title">
+                                        <svg className="tasks-edit-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M16.862 4.487a1.5 1.5 0 0 1 2.121 2.121l-9.9 9.9-3.536.707.707-3.536 9.9-9.9z" />
+                                            <path d="M5 19h14" />
+                                        </svg>
+                                    </button>
                                 </div>
                             )}
-                            <button style={styles.closeButton} onClick={() => setSelectedTask(null)}>&times;</button>
+                            <button className="tasks-close-btn" onClick={() => setSelectedTask(null)}>&times;</button>
                         </div>
-                        <div style={styles.badgeRow}>
-                            <span style={styles.priorityBadge(selectedTask.priority)}>{selectedTask.priority}</span>
+                        <div className="tasks-badge-row">
+                            <span className={`tasks-badge tasks-badge--priority tasks-badge--${selectedTask.priority || 'none'}`}>{selectedTask.priority}</span>
                             <select
-                                style={styles.statusSelect}
+                                className="tasks-status-select"
                                 value={selectedTask.status}
                                 onChange={(e) => handleStatusChange(e.target.value)}
                             >
@@ -328,36 +336,36 @@ export default function Tasks() {
                                 <option value="completed">Completed</option>
                             </select>
                         </div>
-                        <p style={{ marginTop: '1rem', color: '#4b5563' }}>{selectedTask.description || 'No description provided.'}</p>
+                        <p className="tasks-detail-description">{selectedTask.description || 'No description provided.'}</p>
 
-                        <div style={styles.updatesSection}>
-                            <h4 style={styles.sectionTitle}>Updates & Progress</h4>
-                            <div style={styles.updatesList}>
+                        <div className="tasks-updates">
+                            <h4 className="tasks-section-title">Updates & Progress</h4>
+                            <div className="tasks-updates-list">
                                 {(!selectedTask.updates || selectedTask.updates.length === 0) ? (
-                                    <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No updates yet.</p>
+                                    <p className="tasks-muted">No updates yet.</p>
                                 ) : (
                                     selectedTask.updates.map(u => (
-                                        <div key={u.id} style={styles.updateItem}>
-                                            <p style={styles.updateDate}>{new Date(u.created_at).toLocaleString()}</p>
-                                            <p style={styles.updateText}>{u.update_text}</p>
+                                        <div key={u.id} className="tasks-update-item">
+                                            <p className="tasks-update-date">{new Date(u.created_at).toLocaleString()}</p>
+                                            <p className="tasks-update-text">{u.update_text}</p>
                                         </div>
                                     ))
                                 )}
                             </div>
-                            <form onSubmit={handleAddUpdate} style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                            <form onSubmit={handleAddUpdate} className="tasks-update-form">
                                 <input
                                     type="text"
                                     placeholder="Add an update..."
-                                    style={styles.updateInput}
+                                    className="tasks-update-input"
                                     value={updateText}
                                     onChange={(e) => setUpdateText(e.target.value)}
                                 />
-                                <button type="submit" style={styles.updateButton}>Post</button>
+                                <button type="submit" className="tasks-update-btn">Post</button>
                             </form>
                         </div>
 
-                        <div style={styles.detailActions}>
-                            <button style={styles.dangerButton} onClick={handleDeleteTask}>Delete Task</button>
+                        <div className="tasks-detail-actions">
+                            <button className="tasks-danger-btn" onClick={handleDeleteTask}>Delete Task</button>
                         </div>
                     </div>
                 </div>
@@ -365,64 +373,3 @@ export default function Tasks() {
         </div>
     );
 }
-
-// PREMIUM STYLES
-const styles = {
-    pageContainer: { padding: '2rem', flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#f9fafb', minHeight: '100vh', fontFamily: "'Inter', sans-serif" },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' },
-    title: { fontSize: '2.5rem', fontWeight: '800', color: '#111827', margin: 0, letterSpacing: '-0.025em' },
-    subtitle: { fontSize: '1.125rem', color: '#6b7280', margin: '0.5rem 0 0 0' },
-    primaryButton: { background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '0.75rem', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1)', transition: 'all 0.2s' },
-    secondaryButton: { background: 'white', color: '#374151', border: '1px solid #d1d5db', padding: '0.75rem 1.5rem', borderRadius: '0.75rem', fontWeight: '600', cursor: 'pointer' },
-    dangerButton: { background: '#fee2e2', color: '#ef4444', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' },
-    tabsContainer: { display: 'flex', gap: '1rem', borderBottom: '2px solid #e5e7eb', marginBottom: '2rem' },
-    activeTab: { background: 'none', border: 'none', borderBottom: '3px solid #4f46e5', padding: '0.5rem 1rem', fontSize: '1.125rem', fontWeight: '600', color: '#4f46e5', cursor: 'pointer', marginBottom: '-2px' },
-    inactiveTab: { background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1.125rem', fontWeight: '500', color: '#6b7280', cursor: 'pointer', transition: 'color 0.2s' },
-    filterContainer: { display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap', background: 'white', padding: '1rem', borderRadius: '1rem', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' },
-    input: { flex: 1, minWidth: '150px', padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid #d1d5db', fontSize: '0.875rem', outline: 'none' },
-    select: { flex: 1, minWidth: '150px', padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid #d1d5db', fontSize: '0.875rem', outline: 'none', background: 'white' },
-    gridContainer: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' },
-    taskCard: { background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)', borderRadius: '1rem', padding: '1.5rem', border: '1px solid rgba(229, 231, 235, 0.5)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', cursor: 'pointer', transition: 'transform 0.2s, boxShadow 0.2s' },
-    taskHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' },
-    priorityBadge: (priority) => {
-        let colors = { bg: '#f3f4f6', text: '#374151' };
-        if (priority === 'high') colors = { bg: '#fee2e2', text: '#991b1b' };
-        if (priority === 'medium') colors = { bg: '#fef3c7', text: '#92400e' };
-        if (priority === 'low') colors = { bg: '#d1fae5', text: '#065f46' };
-        return { backgroundColor: colors.bg, color: colors.text, padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' };
-    },
-    statusBadge: (status) => {
-        let colors = { bg: '#f3f4f6', text: '#374151' };
-        if (status === 'completed') colors = { bg: '#dbeafe', text: '#1e40af' };
-        if (status === 'in_progress') colors = { bg: '#ede9fe', text: '#5b21b6' };
-        if (status === 'pending') colors = { bg: '#f3f4f6', text: '#4b5563' };
-        return { backgroundColor: colors.bg, color: colors.text, padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600', textTransform: 'capitalize' };
-    },
-    taskTitle: { fontSize: '1.25rem', fontWeight: '700', color: '#111827', margin: '0 0 0.5rem 0' },
-    taskSubject: { fontSize: '0.875rem', fontWeight: '500', color: '#4f46e5', margin: '0 0 0.5rem 0' },
-    taskDate: { fontSize: '0.875rem', color: '#9ca3af', margin: 0, display: 'flex', alignItems: 'center' },
-    cardStyle: { background: 'white', borderRadius: '1rem', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', padding: '3rem', gridColumn: '1 / -1' },
-    emptyState: { display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '1.125rem' },
-
-    // Modal Styles
-    modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17, 24, 39, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' },
-    modalContent: { background: 'white', padding: '2rem', borderRadius: '1.5rem', width: '100%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' },
-    modalDetailContent: { background: 'white', padding: '2.5rem', borderRadius: '1.5rem', width: '100%', maxWidth: '650px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', maxHeight: '90vh', overflowY: 'auto' },
-    modalTitle: { fontSize: '1.5rem', fontWeight: '800', margin: '0 0 1.5rem 0', color: '#111827' },
-    detailHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
-    closeButton: { background: 'none', border: 'none', fontSize: '2rem', lineHeight: '1', color: '#9ca3af', cursor: 'pointer' },
-    formContainer: { display: 'flex', flexDirection: 'column', gap: '1rem' },
-    formInput: { padding: '0.875rem 1rem', borderRadius: '0.75rem', border: '1px solid #e5e7eb', fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s', width: '100%', boxSizing: 'border-box' },
-    modalActions: { display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' },
-    badgeRow: { display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '-0.5rem' },
-    statusSelect: { padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #d1d5db', fontSize: '0.875rem', fontWeight: '600', color: '#374151', background: '#f9fafb', outline: 'none' },
-    updatesSection: { marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid #e5e7eb' },
-    sectionTitle: { fontSize: '1.125rem', fontWeight: '700', color: '#111827', margin: '0 0 1rem 0' },
-    updatesList: { display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '0.5rem' },
-    updateItem: { background: '#f9fafb', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #f3f4f6' },
-    updateDate: { fontSize: '0.75rem', color: '#6b7280', margin: '0 0 0.25rem 0', fontWeight: '600' },
-    updateText: { fontSize: '0.9375rem', color: '#374151', margin: 0, lineHeight: '1.5' },
-    updateInput: { flex: 1, padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid #d1d5db', fontSize: '0.875rem', outline: 'none' },
-    updateButton: { background: '#111827', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '0.75rem', fontWeight: '600', cursor: 'pointer' },
-    detailActions: { display: 'flex', justifyContent: 'flex-end', marginTop: '2.5rem' }
-};
