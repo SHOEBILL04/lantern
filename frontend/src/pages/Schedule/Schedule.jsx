@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../api/client';
 import { ENDPOINTS } from '../../api/endpoints';
+import './Schedule.css';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -194,71 +195,68 @@ export default function Schedule() {
 
     if (loading) {
         return (
-            <div style={styles.page}>
-                <h1 style={styles.title}>Schedule</h1>
-                <p style={styles.subtitle}>Loading your schedule...</p>
+            <div className="schedule-page schedule-page--loading">
+                <h1 className="schedule-title">Schedule</h1>
+                <p className="schedule-subtitle">Loading your schedule...</p>
             </div>
         );
     }
 
     return (
-        <div style={styles.page}>
-            <div style={styles.hero}>
+        <div className="schedule-page">
+            <div className="schedule-hero">
                 <div>
-                    <h1 style={styles.title}>Schedule</h1>
-                    <p style={styles.subtitle}>Drag tasks from each subject onto a date from today onward.</p>
+                    <h1 className="schedule-title">Schedule</h1>
+                    <p className="schedule-subtitle">Drag tasks from each subject onto a date from today onward.</p>
                 </div>
-                <div style={styles.todayBadge}>
-                    <span style={styles.todayLabel}>Today</span>
+                <div className="schedule-today-badge">
+                    <span className="schedule-today-label">Today</span>
                     <strong>{today.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
                 </div>
             </div>
 
-            <div style={styles.layout}>
-                <aside style={styles.sidebar}>
-                    <div style={styles.sidebarHeader}>
-                        <h2 style={styles.sectionTitle}>Subjects</h2>
-                        <span style={styles.sectionMeta}>{subjects.length} total</span>
+            <div className="schedule-layout">
+                <aside className="schedule-sidebar">
+                    <div className="schedule-sidebar-header">
+                        <h2 className="schedule-section-title">Subjects</h2>
+                        <span className="schedule-section-meta">{subjects.length} total</span>
                     </div>
 
                     {subjectGroups.length === 0 ? (
-                        <div style={styles.emptyPanel}>No subjects added yet.</div>
+                        <div className="schedule-empty-panel">No subjects added yet.</div>
                     ) : (
-                        <div style={styles.subjectList}>
+                        <div className="schedule-subject-list">
                             {subjectGroups.map((subject) => (
-                                <div key={subject.id} style={styles.subjectCard}>
-                                    <div style={styles.subjectHeaderRow}>
-                                        <div style={styles.subjectHeading}>
-                                            <span style={{ ...styles.subjectDot, backgroundColor: subject.color_code || '#94a3b8' }} />
-                                            <h3 style={styles.subjectName}>{subject.name}</h3>
+                                <div key={subject.id} className="schedule-subject-card">
+                                    <div className="schedule-subject-header-row">
+                                        <div className="schedule-subject-heading">
+                                            <span className="schedule-subject-dot" style={{ backgroundColor: subject.color_code || '#94a3b8' }} />
+                                            <h3 className="schedule-subject-name">{subject.name}</h3>
                                         </div>
-                                        <span style={styles.subjectCount}>{subject.tasks.length} tasks</span>
+                                        <span className="schedule-subject-count">{subject.tasks.length} tasks</span>
                                     </div>
 
                                     {subject.tasks.length === 0 ? (
-                                        <p style={styles.mutedText}>All tasks completed.</p>
+                                        <p className="schedule-muted-text">All tasks completed.</p>
                                     ) : (
-                                        <div style={styles.taskStack}>
+                                        <div className="schedule-task-stack">
                                             {subject.tasks.map((task, index) => (
                                                 <div
                                                     key={task.id}
                                                     draggable
                                                     onDragStart={() => handleTaskDragStart(task)}
                                                     onDragEnd={() => handleTaskDragEnd(task)}
-                                                    style={{
-                                                        ...styles.taskChip,
-                                                        ...(draggedTaskId === task.id ? styles.taskChipDragging : {}),
-                                                    }}
+                                                    className={`schedule-task-chip${draggedTaskId === task.id ? ' schedule-task-chip--dragging' : ''}`}
                                                 >
-                                                    <span style={styles.taskChipSubject}>{subject.name}</span>
-                                                    <strong style={styles.taskChipTitle}>
+                                                    <span className="schedule-task-chip-subject">{subject.name}</span>
+                                                    <strong className="schedule-task-chip-title">
                                                         {getTaskDisplayLabel(task)}
                                                     </strong>
-                                                    <span style={styles.taskChipMeta}>
+                                                    <span className="schedule-task-chip-meta">
                                                         {courseMap[task.course_id]?.title || task.title || `Task ${index + 1}`}
                                                     </span>
                                                     {task.due_date && (
-                                                        <span style={styles.taskChipDate}>Scheduled: {task.due_date}</span>
+                                                        <span className="schedule-task-chip-date">Scheduled: {task.due_date}</span>
                                                     )}
                                                 </div>
                                             ))}
@@ -270,36 +268,36 @@ export default function Schedule() {
                     )}
 
                     {subjects.length > 0 && unscheduledGroups.length === 0 && (
-                        <div style={styles.noteCard}>
+                        <div className="schedule-note-card">
                             Every task is already placed on a date.
                         </div>
                     )}
                 </aside>
 
-                <section style={styles.calendarPanel}>
-                    <div style={styles.calendarHeader}>
+                <section className="schedule-calendar-panel">
+                    <div className="schedule-calendar-header">
                         <div>
-                            <h2 style={styles.sectionTitle}>Calendar</h2>
-                            <p style={styles.calendarSubtext}>{monthLabel}</p>
+                            <h2 className="schedule-section-title">Calendar</h2>
+                            <p className="schedule-calendar-subtext">{monthLabel}</p>
                         </div>
-                        <div style={styles.calendarLegend}>
-                            <span style={styles.legendPill}>Current month</span>
-                            <span style={styles.legendPill}>Drop on today or later</span>
+                        <div className="schedule-calendar-legend">
+                            <span className="schedule-legend-pill">Current month</span>
+                            <span className="schedule-legend-pill">Drop on today or later</span>
                         </div>
                     </div>
 
-                    <div style={styles.calendarScroll}>
-                        <div style={styles.calendarFrame}>
-                            <div style={styles.weekdayRow}>
+                    <div className="schedule-calendar-scroll">
+                        <div className="schedule-calendar-frame">
+                            <div className="schedule-weekday-row">
                                 {DAYS.map((day) => (
-                                    <div key={day} style={styles.weekdayCell}>{day}</div>
+                                    <div key={day} className="schedule-weekday-cell">{day}</div>
                                 ))}
                             </div>
 
-                            <div style={styles.calendarGrid}>
+                            <div className="schedule-calendar-grid">
                                 {calendarDays.map((day, index) => {
                                     if (!day) {
-                                        return <div key={`empty-${index}`} style={styles.emptyCalendarCell} />;
+                                        return <div key={`empty-${index}`} className="schedule-empty-calendar-cell" />;
                                     }
 
                                     return (
@@ -311,25 +309,18 @@ export default function Schedule() {
                                             onDrop={() => {
                                                 if (!day.isPast) handleTaskDrop(day.dateKey);
                                             }}
-                                            style={{
-                                                ...styles.dayCell,
-                                                ...(day.isToday ? styles.todayCell : {}),
-                                                ...(day.isPast ? styles.pastCell : {}),
-                                            }}
+                                            className={`schedule-day-cell${day.isToday ? ' schedule-day-cell--today' : ''}${day.isPast ? ' schedule-day-cell--past' : ''}`}
                                         >
-                                            <div style={styles.dayCellHeader}>
-                                                <span style={{
-                                                    ...styles.dayNumber,
-                                                    ...(day.isToday ? styles.todayNumber : {}),
-                                                }}>
+                                            <div className="schedule-day-cell-header">
+                                                <span className={`schedule-day-number${day.isToday ? ' schedule-day-number--today' : ''}`}>
                                                     {day.dayNumber}
                                                 </span>
-                                                {!day.isPast && <span style={styles.dropHint}>Drop here</span>}
+                                                {!day.isPast && <span className="schedule-drop-hint">Drop here</span>}
                                             </div>
 
-                                            <div style={styles.dayTaskList}>
+                                            <div className="schedule-day-task-list">
                                                 {day.tasks.length === 0 ? (
-                                                    <span style={styles.emptyDateText}>
+                                                    <span className="schedule-empty-date-text">
                                                         {day.isPast ? 'Past date' : 'No tasks'}
                                                     </span>
                                                 ) : (
@@ -339,12 +330,12 @@ export default function Schedule() {
                                                             draggable={!day.isPast}
                                                             onDragStart={() => handleTaskDragStart(task)}
                                                             onDragEnd={() => handleTaskDragEnd(task)}
-                                                            style={styles.dayTaskCard}
+                                                            className="schedule-day-task-card"
                                                         >
-                                                            <span style={styles.dayTaskSubject}>
+                                                            <span className="schedule-day-task-subject">
                                                                 {task.subject || findSubjectName(task, subjectGroups) || 'General'}
                                                             </span>
-                                                            <strong style={styles.dayTaskTitle}>{getTaskDisplayLabel(task)}</strong>
+                                                            <strong className="schedule-day-task-title">{getTaskDisplayLabel(task)}</strong>
                                                         </div>
                                                     ))
                                                 )}
@@ -402,331 +393,3 @@ function sortTasksByDisplayOrder(taskList) {
         return left.id - right.id;
     });
 }
-
-const styles = {
-    page: {
-        minHeight: '100vh',
-        padding: '2rem',
-        background: 'linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%)',
-        color: '#0f172a',
-    },
-    hero: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        alignItems: 'flex-start',
-        marginBottom: '1.75rem',
-        flexWrap: 'wrap',
-    },
-    title: {
-        fontSize: '2.5rem',
-        lineHeight: 1.05,
-        margin: 0,
-        fontWeight: 800,
-        letterSpacing: '-0.04em',
-    },
-    subtitle: {
-        margin: '0.5rem 0 0',
-        color: '#475569',
-        fontSize: '1rem',
-    },
-    todayBadge: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.35rem',
-        minWidth: '180px',
-        padding: '1rem 1.1rem',
-        borderRadius: '1rem',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%)',
-        color: '#f8fafc',
-        boxShadow: '0 18px 45px rgba(29, 78, 216, 0.18)',
-    },
-    todayLabel: {
-        fontSize: '0.75rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.14em',
-        color: 'rgba(255,255,255,0.74)',
-    },
-    layout: {
-        display: 'grid',
-        gridTemplateColumns: 'minmax(260px, 1fr) minmax(0, 2fr)',
-        gap: '1.5rem',
-        alignItems: 'start',
-    },
-    sidebar: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem',
-        padding: '1.25rem',
-        borderRadius: '1.5rem',
-        background: 'rgba(255,255,255,0.86)',
-        border: '1px solid rgba(148, 163, 184, 0.2)',
-        boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08)',
-        backdropFilter: 'blur(12px)',
-        maxHeight: 'calc(100vh - 10rem)',
-        overflowY: 'auto',
-    },
-    sidebarHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'baseline',
-        gap: '1rem',
-    },
-    sectionTitle: {
-        margin: 0,
-        fontSize: '1.25rem',
-        fontWeight: 700,
-    },
-    sectionMeta: {
-        fontSize: '0.875rem',
-        color: '#64748b',
-    },
-    subjectList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.9rem',
-    },
-    subjectCard: {
-        padding: '1rem',
-        borderRadius: '1.15rem',
-        background: '#f8fafc',
-        border: '1px solid #e2e8f0',
-    },
-    subjectHeaderRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '0.75rem',
-        alignItems: 'center',
-        marginBottom: '0.85rem',
-    },
-    subjectHeading: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.65rem',
-        minWidth: 0,
-    },
-    subjectDot: {
-        width: '0.8rem',
-        height: '0.8rem',
-        borderRadius: '999px',
-        flexShrink: 0,
-    },
-    subjectName: {
-        margin: 0,
-        fontSize: '1rem',
-        fontWeight: 700,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-    },
-    subjectCount: {
-        fontSize: '0.8rem',
-        color: '#475569',
-        whiteSpace: 'nowrap',
-    },
-    taskStack: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.65rem',
-    },
-    taskChip: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.22rem',
-        padding: '0.8rem 0.9rem',
-        borderRadius: '0.9rem',
-        background: 'linear-gradient(135deg, #ffffff 0%, #eff6ff 100%)',
-        border: '1px solid #bfdbfe',
-        cursor: 'grab',
-        boxShadow: '0 10px 20px rgba(59, 130, 246, 0.08)',
-    },
-    taskChipDragging: {
-        opacity: 0.55,
-        transform: 'scale(0.98)',
-    },
-    taskChipSubject: {
-        fontSize: '0.72rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        color: '#1d4ed8',
-        fontWeight: 700,
-    },
-    taskChipTitle: {
-        fontSize: '0.96rem',
-        color: '#0f172a',
-    },
-    taskChipMeta: {
-        fontSize: '0.8rem',
-        color: '#64748b',
-    },
-    taskChipDate: {
-        fontSize: '0.75rem',
-        color: '#0f766e',
-        marginTop: '0.2rem',
-    },
-    mutedText: {
-        margin: 0,
-        color: '#64748b',
-        fontSize: '0.9rem',
-    },
-    noteCard: {
-        padding: '0.9rem 1rem',
-        borderRadius: '1rem',
-        background: '#ecfeff',
-        border: '1px solid #a5f3fc',
-        color: '#155e75',
-        fontSize: '0.9rem',
-    },
-    emptyPanel: {
-        padding: '1.25rem',
-        borderRadius: '1rem',
-        background: '#f8fafc',
-        border: '1px dashed #cbd5e1',
-        color: '#64748b',
-        textAlign: 'center',
-    },
-    calendarPanel: {
-        padding: '1.25rem',
-        borderRadius: '1.5rem',
-        background: 'rgba(255,255,255,0.9)',
-        border: '1px solid rgba(148, 163, 184, 0.2)',
-        boxShadow: '0 20px 50px rgba(15, 23, 42, 0.08)',
-        backdropFilter: 'blur(12px)',
-    },
-    calendarScroll: {
-        overflowX: 'auto',
-        paddingBottom: '0.35rem',
-    },
-    calendarFrame: {
-        minWidth: '720px',
-    },
-    calendarHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        alignItems: 'center',
-        marginBottom: '1rem',
-        flexWrap: 'wrap',
-    },
-    calendarSubtext: {
-        margin: '0.35rem 0 0',
-        fontSize: '0.95rem',
-        color: '#64748b',
-    },
-    calendarLegend: {
-        display: 'flex',
-        gap: '0.5rem',
-        flexWrap: 'wrap',
-    },
-    legendPill: {
-        padding: '0.45rem 0.7rem',
-        borderRadius: '999px',
-        background: '#eff6ff',
-        border: '1px solid #bfdbfe',
-        fontSize: '0.78rem',
-        color: '#1d4ed8',
-        fontWeight: 600,
-    },
-    weekdayRow: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-        gap: '0.75rem',
-        marginBottom: '0.75rem',
-    },
-    weekdayCell: {
-        textAlign: 'center',
-        fontSize: '0.82rem',
-        fontWeight: 700,
-        color: '#64748b',
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-    },
-    calendarGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-        gap: '0.75rem',
-    },
-    emptyCalendarCell: {
-        minHeight: '140px',
-        borderRadius: '1rem',
-        background: 'transparent',
-    },
-    dayCell: {
-        minHeight: '140px',
-        padding: '0.8rem',
-        borderRadius: '1rem',
-        background: '#f8fafc',
-        border: '1px solid #e2e8f0',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-    },
-    todayCell: {
-        background: 'linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%)',
-        border: '1px solid #60a5fa',
-    },
-    pastCell: {
-        opacity: 0.55,
-        background: '#f1f5f9',
-    },
-    dayCellHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '0.5rem',
-        alignItems: 'center',
-    },
-    dayNumber: {
-        width: '2rem',
-        height: '2rem',
-        borderRadius: '999px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontWeight: 700,
-        color: '#334155',
-        background: '#ffffff',
-        border: '1px solid #e2e8f0',
-    },
-    todayNumber: {
-        background: '#1d4ed8',
-        color: '#ffffff',
-        border: '1px solid #1d4ed8',
-    },
-    dropHint: {
-        fontSize: '0.72rem',
-        color: '#2563eb',
-        fontWeight: 600,
-    },
-    dayTaskList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.45rem',
-        minHeight: 0,
-    },
-    emptyDateText: {
-        fontSize: '0.8rem',
-        color: '#94a3b8',
-    },
-    dayTaskCard: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.18rem',
-        padding: '0.55rem 0.6rem',
-        borderRadius: '0.8rem',
-        background: '#ffffff',
-        border: '1px solid #dbeafe',
-        cursor: 'grab',
-    },
-    dayTaskSubject: {
-        fontSize: '0.68rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        color: '#1d4ed8',
-        fontWeight: 700,
-    },
-    dayTaskTitle: {
-        fontSize: '0.82rem',
-        color: '#0f172a',
-        lineHeight: 1.3,
-    },
-};
