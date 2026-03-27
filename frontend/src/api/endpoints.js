@@ -10,4 +10,5 @@ export const ENDPOINTS = {
   HABITS: "/habits",
   HABITS_TRACK: (id) => `/habits/${id}/track`,
   NOTES: "/notes",
+  NOTES_QUIZ: (id) => `/notes/${id}/quiz`, // ← NEW
 };
