@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Note;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class NoteController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Note::where('user_id', auth()->id());
+        $query = DB::table('notes')->where('user_id', auth()->id());
         
         if ($request->has('task_id')) {
             $query->where('task_id', $request->task_id);
@@ -33,6 +33,8 @@ class NoteController extends Controller
             'task_id' => $request->task_id,
             'title' => $request->title,
             'content' => $request->content,
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
 
         if ($request->hasFile('file')) {
@@ -43,14 +45,15 @@ class NoteController extends Controller
             $noteData['file_type'] = $file->getClientOriginalExtension();
         }
 
-        $note = Note::create($noteData);
+        $id = DB::table('notes')->insertGetId($noteData);
+        $note = DB::table('notes')->find($id);
 
         return response()->json($note, 201);
     }
 
     public function destroy($id)
     {
-        $note = Note::where('user_id', auth()->id())->where('id', $id)->first();
+        $note = DB::table('notes')->where('user_id', auth()->id())->where('id', $id)->first();
         if (!$note) {
             return response()->json(['message' => 'Not found'], 404);
         }
@@ -59,7 +62,7 @@ class NoteController extends Controller
             Storage::disk('public')->delete($note->file_path);
         }
         
-        $note->delete();
+        DB::table('notes')->where('id', $id)->delete();
 
         return response()->json(['message' => 'Deleted successfully']);
     }
