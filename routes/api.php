@@ -39,8 +39,9 @@ Route::group(['middleware' => 'auth:api'], function () {
     // Achievements
     Route::get('/achievements', [\App\Http\Controllers\AchievementController::class, 'index']);
 
-    // Notes
+    // Notes (CRUD + AI quiz generation)
     Route::apiResource('notes', \App\Http\Controllers\NoteController::class)->except(['show', 'update']);
+    Route::post('/notes/{id}/quiz', [\App\Http\Controllers\NoteController::class, 'generateQuiz']); // ← NEW
 });
 
 // items (can later be protected by JWT middleware)
