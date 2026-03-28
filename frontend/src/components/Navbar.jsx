@@ -23,11 +23,9 @@ export default function Navbar() {
       { key: "schedule", label: "Schedule", to: "/schedule" },
       { key: "tasks", label: "Tasks", to: "/tasks" },
       { key: "progress", label: "Progress", to: "/progress" },
-      { key: "subjects", label: "Subjects", to: "/subjects" },
       { key: "notes", label: "Notes", to: "/notes" },
       { key: "habits", label: "Habits", to: "/habits" },
       { key: "achievements", label: "Achievements", to: "/achievements" },
-      { key: "resources", label: "Resources", to: "/resources" },
     ],
     []
   );
@@ -109,7 +107,7 @@ export default function Navbar() {
                 alt="Lantern Logo"
                 className="h-9 w-auto transition-opacity duration-200 group-hover:opacity-90"
               />
-              <span className="hidden sm:block tracking-[0.3em] text-white font-semibold">
+              <span className="hidden sm:block font-logo text-[1.875rem] tracking-[0.15em] text-[#6EC1FF] transition-colors duration-200 group-hover:text-[#89D0FF]">
                 LANTERN
               </span>
             </Link>
