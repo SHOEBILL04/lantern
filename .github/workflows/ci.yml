@@ -28,7 +28,6 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=20
-          --log-bin-trust-function-creators=1
 
     steps:
       - name: Checkout repository
@@ -89,7 +88,7 @@ jobs:
       - name: Load schema
         run: |
           grep -viE '^(CREATE DATABASE|CREATE USER|GRANT |FLUSH PRIVILEGES|USE )' schema.sql > ci-schema.sql
-          mysql -h 127.0.0.1 -u lantern -psecret lantern_ci < ci-schema.sql
+          mysql -h 127.0.0.1 -u root -proot lantern_ci < ci-schema.sql
 
       - name: Run backend tests
         run: php artisan test --testsuite=Feature --without-tty
