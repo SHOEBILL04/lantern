@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { ENDPOINTS } from '../../api/endpoints';
+import './Habits.css';
 
 export default function Habits() {
     const [habits, setHabits] = useState([]);
@@ -49,7 +50,7 @@ export default function Habits() {
     };
 
     const deleteHabit = async (id) => {
-        if (!window.confirm("Delete this habit?")) return;
+        if (!window.confirm('Delete this habit?')) return;
         try {
             await api.delete(`${ENDPOINTS.HABITS}/${id}`);
             setHabits(habits.filter(h => h.id !== id));
@@ -105,46 +106,75 @@ export default function Habits() {
         return (habit.trackers || []).find(t => t.date.substring(0, 10) === todayStr);
     };
 
-    if (loading) return <div style={pageContainerStyle}><div style={loadingStyle}>Loading your habits...</div></div>;
+    if (loading) {
+        return (
+            <div className="habits-page">
+                <div className="habits-loading">Loading your habits...</div>
+            </div>
+        );
+    }
 
     const dailyHabits = habits.filter(h => h.type === 'daily');
     const weeklyHabits = habits.filter(h => h.type === 'weekly');
+    const totalHabits = habits.length;
+    const completedHabits = habits.filter(h => h.is_completed).length;
 
     return (
-        <div style={pageContainerStyle}>
-            <div style={headerNavStyle}>
-                <div>
-                    <h1 style={titleStyle}>My Habits</h1>
-                    <p style={subtitleStyle}>Forge discipline through consistency.</p>
+        <div className="habits-page">
+            <div className="habits-hero">
+                <div className="habits-hero-text">
+                    <p className="habits-kicker">Habits</p>
+                    <h1 className="habits-title">Rituals that compound</h1>
+                    <p className="habits-subtitle">Forge discipline through consistency.</p>
                 </div>
-                <button
-                    style={addButtonStyle}
-                    onClick={() => setShowAddForm(!showAddForm)}
-                >
-                    {showAddForm ? '✕ Cancel' : '+ New Habit'}
-                </button>
+                <div className="habits-hero-actions">
+                    <div className="habits-pill-row">
+                        <div className="habits-pill">
+                            <span className="habits-pill-label">Total</span>
+                            <span className="habits-pill-value">{totalHabits}</span>
+                        </div>
+                        <div className="habits-pill">
+                            <span className="habits-pill-label">Daily</span>
+                            <span className="habits-pill-value">{dailyHabits.length}</span>
+                        </div>
+                        <div className="habits-pill">
+                            <span className="habits-pill-label">Weekly</span>
+                            <span className="habits-pill-value">{weeklyHabits.length}</span>
+                        </div>
+                        <div className="habits-pill habits-pill--success">
+                            <span className="habits-pill-label">Completed</span>
+                            <span className="habits-pill-value">{completedHabits}</span>
+                        </div>
+                    </div>
+                    <button
+                        className="habits-primary-btn"
+                        onClick={() => setShowAddForm(!showAddForm)}
+                    >
+                        {showAddForm ? 'Cancel' : '+ New Habit'}
+                    </button>
+                </div>
             </div>
 
             {showAddForm && (
-                <form onSubmit={addHabit} style={addFormStyle}>
-                    <div style={formRowStyle}>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Habit Name</label>
+                <form onSubmit={addHabit} className="habits-form">
+                    <div className="habits-form-row">
+                        <div className="habits-input-group">
+                            <label className="habits-label">Habit Name</label>
                             <input
                                 type="text"
                                 placeholder="e.g., Read 10 pages"
                                 value={newHabitName}
                                 onChange={(e) => setNewHabitName(e.target.value)}
-                                style={inputStyle}
+                                className="habits-input"
                                 autoFocus
                             />
                         </div>
-                        <div style={inputGroupStyle}>
-                            <label style={labelStyle}>Type</label>
+                        <div className="habits-input-group">
+                            <label className="habits-label">Type</label>
                             <select
                                 value={newHabitType}
                                 onChange={e => setNewHabitType(e.target.value)}
-                                style={selectStyle}
+                                className="habits-select"
                             >
                                 <option value="daily">Daily Challenge (21 Days)</option>
                                 <option value="weekly">Weekly Routine (Allowed Skips)</option>
@@ -152,41 +182,46 @@ export default function Habits() {
                         </div>
 
                         {newHabitType === 'weekly' && (
-                            <div style={inputGroupStyle}>
-                                <label style={labelStyle}>Weekly Skips</label>
+                            <div className="habits-input-group">
+                                <label className="habits-label">Weekly Skips</label>
                                 <input
                                     type="number"
                                     min="0"
                                     max="6"
                                     value={newHabitSkips}
                                     onChange={(e) => setNewHabitSkips(e.target.value)}
-                                    style={inputStyle}
+                                    className="habits-input"
                                 />
                             </div>
                         )}
                     </div>
-                    <button type="submit" style={submitButtonStyle}>Create Habit</button>
+                    <button type="submit" className="habits-submit-btn">Create Habit</button>
                 </form>
             )}
 
             {habits.length === 0 && !showAddForm ? (
-                <div style={emptyCardStyle}>
-                    <div style={emptyStateIconStyle}>🚀</div>
-                    <h3 style={emptyStateTitleStyle}>Ready to build better habits?</h3>
-                    <p style={emptyStateTextStyle}>Start by creating a daily or weekly routine.</p>
+                <div className="habits-empty">
+                    <div className="habits-empty-art" aria-hidden="true">
+                        <span className="habits-empty-ring"></span>
+                        <span className="habits-empty-ring"></span>
+                        <span className="habits-empty-core"></span>
+                    </div>
+                    <h3 className="habits-empty-title">Ready to build better habits?</h3>
+                    <p className="habits-empty-text">Start by creating a daily or weekly routine.</p>
                 </div>
             ) : (
-                <div style={habitListContainerStyle}>
-                    {/* DAILY HABITS */}
+                <div className="habits-sections">
                     {dailyHabits.length > 0 && (
-                        <div style={sectionStyle}>
-                            <h2 style={sectionTitleStyle}>Daily Challenges</h2>
-                            <div style={gridStyle}>
-                                {dailyHabits.map(habit => {
+                        <section className="habits-section habits-animate" style={{ '--section-delay': '80ms' }}>
+                            <div className="habits-section-head">
+                                <h2 className="habits-section-title">Daily Challenges</h2>
+                                <p className="habits-section-subtitle">Complete 21 days to lock in the ritual.</p>
+                            </div>
+                            <div className="habits-grid">
+                                {dailyHabits.map((habit, index) => {
                                     const todayTracker = getTodayTracker(habit);
                                     const isDoneToday = todayTracker?.is_completed;
 
-                                    // Calculate exactly how many days completed since start_date
                                     let daysCompleted = 0;
                                     if (habit.start_date) {
                                         daysCompleted = (habit.trackers || []).filter(t => t.date >= habit.start_date && t.is_completed).length;
@@ -194,83 +229,100 @@ export default function Habits() {
                                     const progressPercent = Math.min(100, Math.round((daysCompleted / 21) * 100));
 
                                     return (
-                                        <div key={habit.id} style={{ ...cardStyle, ...(habit.is_completed ? completedCardStyle : {}) }}>
-                                            <div style={cardHeaderStyle}>
-                                                <div style={badgeStyle('daily')}>Daily</div>
-                                                <button onClick={() => deleteHabit(habit.id)} style={deleteBtnStyle}>✕</button>
+                                        <div
+                                            key={habit.id}
+                                            className={`habit-card ${habit.is_completed ? 'habit-card--completed' : ''}`}
+                                            style={{ '--habit-delay': `${index * 60 + 120}ms` }}
+                                        >
+                                            <div className="habit-card-top">
+                                                <span className="habit-badge habit-badge--daily">Daily</span>
+                                                <button onClick={() => deleteHabit(habit.id)} className="habit-delete" aria-label="Delete habit">
+                                                    X
+                                                </button>
                                             </div>
-                                            <h3 style={cardTitleStyle}>{habit.name}</h3>
+                                            <h3 className="habit-name">{habit.name}</h3>
 
-                                            <div style={progressContainerStyle}>
-                                                <div style={progressHeaderStyle}>
-                                                    <span style={progressTextStyle}>{daysCompleted} / 21 Days</span>
-                                                    <span style={progressPercentStyle}>{progressPercent}%</span>
+                                            <div className="habit-progress">
+                                                <div className="habit-progress-head">
+                                                    <span className="habit-progress-text">{daysCompleted} / 21 Days</span>
+                                                    <span className="habit-progress-value">{progressPercent}%</span>
                                                 </div>
-                                                <div style={progressBarBgStyle}>
-                                                    <div style={{ ...progressBarFillStyle, width: `${progressPercent}%`, backgroundColor: habit.is_completed ? '#10b981' : '#3b82f6' }}></div>
+                                                <div className="habit-progress-track">
+                                                    <div
+                                                        className={`habit-progress-fill ${habit.is_completed ? 'habit-progress-fill--complete' : ''}`}
+                                                        style={{ width: `${progressPercent}%` }}
+                                                    ></div>
                                                 </div>
                                             </div>
 
-                                            <div style={actionContainerStyle}>
+                                            <div className="habit-actions">
                                                 {habit.is_completed ? (
-                                                    <div style={completedBadgeStyle}>🎉 21 Days Completed!</div>
+                                                    <div className="habit-complete-badge">21 Days Completed</div>
                                                 ) : (
                                                     <button
-                                                        style={{ ...actionBtnStyle, ...(isDoneToday ? activeActionBtnStyle : {}) }}
+                                                        className={`habit-action-btn ${isDoneToday ? 'habit-action-btn--active' : ''}`}
                                                         onClick={() => trackDay(habit.id, !isDoneToday)}
                                                     >
-                                                        {isDoneToday ? '✓ Done for Today' : 'Mark Complete'}
+                                                        {isDoneToday ? 'Done for Today' : 'Mark Complete'}
                                                     </button>
                                                 )}
                                             </div>
                                         </div>
-                                    )
+                                    );
                                 })}
                             </div>
-                        </div>
+                        </section>
                     )}
 
-                    {/* WEEKLY HABITS */}
                     {weeklyHabits.length > 0 && (
-                        <div style={sectionStyle}>
-                            <h2 style={sectionTitleStyle}>Weekly Routines</h2>
-                            <div style={gridStyle}>
-                                {weeklyHabits.map(habit => {
+                        <section className="habits-section habits-animate" style={{ '--section-delay': '140ms' }}>
+                            <div className="habits-section-head">
+                                <h2 className="habits-section-title">Weekly Routines</h2>
+                                <p className="habits-section-subtitle">Use skips wisely and keep the rhythm.</p>
+                            </div>
+                            <div className="habits-grid">
+                                {weeklyHabits.map((habit, index) => {
                                     const todayTracker = getTodayTracker(habit);
                                     const isDoneToday = todayTracker?.is_completed;
                                     const isSkippedToday = todayTracker?.is_skipped;
 
-                                    // Calculate skips this week
                                     const d = new Date();
-                                    const dayOfWeek = d.getDay(); // 0 is Sunday
-                                    const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Get Monday
+                                    const dayOfWeek = d.getDay();
+                                    const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
                                     const monday = new Date(d.setDate(diff)).toLocaleDateString('en-CA');
 
                                     const skipsThisWeek = (habit.trackers || []).filter(t => t.date >= monday && t.is_skipped).length;
                                     const skipsLeft = Math.max(0, habit.allowed_skips - skipsThisWeek);
 
                                     return (
-                                        <div key={habit.id} style={cardStyle}>
-                                            <div style={cardHeaderStyle}>
-                                                <div style={badgeStyle('weekly')}>Weekly</div>
-                                                <button onClick={() => deleteHabit(habit.id)} style={deleteBtnStyle}>✕</button>
+                                        <div
+                                            key={habit.id}
+                                            className="habit-card"
+                                            style={{ '--habit-delay': `${index * 60 + 200}ms` }}
+                                        >
+                                            <div className="habit-card-top">
+                                                <span className="habit-badge habit-badge--weekly">Weekly</span>
+                                                <button onClick={() => deleteHabit(habit.id)} className="habit-delete" aria-label="Delete habit">
+                                                    X
+                                                </button>
                                             </div>
-                                            <h3 style={cardTitleStyle}>{habit.name}</h3>
+                                            <h3 className="habit-name">{habit.name}</h3>
 
-                                            <div style={skipsInfoStyle}>
-                                                <span style={skipsNumberStyle}>{skipsLeft}</span> skips remaining this week
+                                            <div className="habit-skip-box">
+                                                <span className="habit-skip-count">{skipsLeft}</span>
+                                                <span className="habit-skip-text">skips remaining this week</span>
                                             </div>
 
-                                            <div style={weeklyActionGroupStyle}>
+                                            <div className="habit-actions habit-actions-row">
                                                 <button
-                                                    style={{ ...actionBtnStyle, flex: 1, ...(isDoneToday ? activeActionBtnStyle : {}) }}
+                                                    className={`habit-action-btn habit-action-btn--primary ${isDoneToday ? 'habit-action-btn--active' : ''}`}
                                                     onClick={() => trackDay(habit.id, !isDoneToday, false)}
                                                     disabled={isSkippedToday}
                                                 >
-                                                    {isDoneToday ? '✓ Done' : 'Complete'}
+                                                    {isDoneToday ? 'Done' : 'Complete'}
                                                 </button>
                                                 <button
-                                                    style={{ ...skipBtnStyle, flex: 1, ...(isSkippedToday ? activeSkipBtnStyle : {}) }}
+                                                    className={`habit-action-btn habit-action-btn--ghost ${isSkippedToday ? 'habit-action-btn--skip' : ''}`}
                                                     onClick={() => trackDay(habit.id, false, !isSkippedToday)}
                                                     disabled={isDoneToday}
                                                 >
@@ -278,71 +330,13 @@ export default function Habits() {
                                                 </button>
                                             </div>
                                         </div>
-                                    )
+                                    );
                                 })}
                             </div>
-                        </div>
+                        </section>
                     )}
                 </div>
             )}
         </div>
     );
 }
-
-// STYLES - Modern Overhaul
-const pageContainerStyle = { padding: '3rem', flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#f9fafb', fontFamily: '"Inter", sans-serif', minHeight: '100vh', boxSizing: 'border-box' };
-const headerNavStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' };
-const titleStyle = { fontSize: '2.5rem', fontWeight: '800', color: '#111827', margin: 0, letterSpacing: '-0.025em' };
-const subtitleStyle = { fontSize: '1.1rem', color: '#6b7280', marginTop: '0.5rem', fontWeight: '400' };
-const addButtonStyle = { background: '#111827', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '99px', fontSize: '0.95rem', fontWeight: '600', cursor: 'pointer', border: '2px solid transparent', transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' };
-const loadingStyle = { fontSize: '1.2rem', color: '#6b7280', textAlign: 'center', marginTop: '4rem', fontWeight: '500' };
-
-// Form Styles
-const addFormStyle = { background: 'white', padding: '2rem', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)', marginBottom: '3rem', border: '1px solid #f3f4f6' };
-const formRowStyle = { display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' };
-const inputGroupStyle = { display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: '1 1 200px' };
-const labelStyle = { fontSize: '0.85rem', fontWeight: '600', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em' };
-const inputStyle = { padding: '0.875rem 1rem', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '1rem', backgroundColor: '#f9fafb', transition: 'border-color 0.2s, box-shadow 0.2s', outline: 'none' };
-const selectStyle = { ...inputStyle, cursor: 'pointer', appearance: 'none', backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' };
-const submitButtonStyle = { background: '#2563eb', color: 'white', padding: '0.875rem 2rem', borderRadius: '10px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '1rem', boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)', transition: 'background-color 0.2s' };
-
-// Layout
-const habitListContainerStyle = { display: 'flex', flexDirection: 'column', gap: '3rem' };
-const sectionStyle = { display: 'flex', flexDirection: 'column', gap: '1.5rem' };
-const sectionTitleStyle = { fontSize: '1.5rem', fontWeight: '700', color: '#1f2937', margin: 0, paddingBottom: '0.5rem', borderBottom: '2px solid #e5e7eb', display: 'inline-block', alignSelf: 'flex-start' };
-const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' };
-
-// Cards
-const cardStyle = { background: 'white', borderRadius: '20px', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid #f3f4f6', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', transition: 'transform 0.2s, box-shadow 0.2s' };
-const completedCardStyle = { background: '#f0fdf4', borderColor: '#bbf7d0', boxShadow: 'none' };
-const cardHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' };
-const badgeStyle = (type) => ({ padding: '0.35rem 0.75rem', borderRadius: '99px', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', backgroundColor: type === 'daily' ? '#eff6ff' : '#fdf4ff', color: type === 'daily' ? '#2563eb' : '#c026d3' });
-const deleteBtnStyle = { background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '0.25rem', borderRadius: '50%', fontSize: '1rem', transition: 'background-color 0.2s, color 0.2s' };
-const cardTitleStyle = { fontSize: '1.25rem', fontWeight: '700', color: '#111827', margin: 0 };
-
-// Progress (Daily)
-const progressContainerStyle = { display: 'flex', flexDirection: 'column', gap: '0.5rem' };
-const progressHeaderStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' };
-const progressTextStyle = { fontWeight: '600', color: '#4b5563' };
-const progressPercentStyle = { fontWeight: '700', color: '#111827' };
-const progressBarBgStyle = { height: '10px', backgroundColor: '#e5e7eb', borderRadius: '99px', overflow: 'hidden' };
-const progressBarFillStyle = { height: '100%', borderRadius: '99px', transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)' };
-
-// Skips (Weekly)
-const skipsInfoStyle = { fontSize: '0.95rem', color: '#4b5563', backgroundColor: '#f3f4f6', padding: '0.75rem 1rem', borderRadius: '10px', textAlign: 'center' };
-const skipsNumberStyle = { fontWeight: '800', color: '#111827', fontSize: '1.1rem' };
-
-// Actions
-const actionContainerStyle = { marginTop: 'auto', paddingTop: '0.5rem' };
-const weeklyActionGroupStyle = { display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem' };
-const actionBtnStyle = { width: '100%', padding: '0.875rem', borderRadius: '12px', border: '2px solid #e5e7eb', backgroundColor: 'white', color: '#4b5563', fontWeight: '600', fontSize: '0.95rem', cursor: 'pointer', transition: 'all 0.2s' };
-const activeActionBtnStyle = { backgroundColor: '#10b981', borderColor: '#10b981', color: 'white', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)' };
-const skipBtnStyle = { ...actionBtnStyle };
-const activeSkipBtnStyle = { backgroundColor: '#f59e0b', borderColor: '#f59e0b', color: 'white', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.2)' };
-const completedBadgeStyle = { textAlign: 'center', padding: '0.875rem', backgroundColor: '#d1fae5', color: '#065f46', borderRadius: '12px', fontWeight: '700' };
-
-// Empty state
-const emptyCardStyle = { background: 'white', borderRadius: '24px', padding: '5rem 2rem', border: '2px dashed #e5e7eb', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' };
-const emptyStateIconStyle = { fontSize: '3rem', marginBottom: '1rem' };
-const emptyStateTitleStyle = { fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: '0 0 0.5rem 0' };
-const emptyStateTextStyle = { fontSize: '1rem', color: '#6b7280', margin: 0 };
