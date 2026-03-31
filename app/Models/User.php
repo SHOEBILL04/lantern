@@ -64,11 +64,6 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Task::class);
     }
 
-    public function resources()
-    {
-        return $this->hasMany(Resource::class);
-    }
-
     public function achievements()
     {
         return $this->belongsToMany(Achievement::class, 'user_achievements')
@@ -89,6 +84,11 @@ class User extends Authenticatable implements JWTSubject
     public function habits()
     {
         return $this->hasMany(Habit::class);
+    }
+
+    public function notes()
+    {
+        return $this->hasMany(Note::class);
     }
 
     /**

@@ -26,11 +26,6 @@ class Course extends Model
         return $this->hasMany(Task::class);
     }
 
-    public function resources()
-    {
-        return $this->hasMany(Resource::class);
-    }
-
     public function studySessions()
     {
         return $this->hasMany(StudySession::class);

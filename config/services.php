@@ -31,4 +31,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'gemini' => [
+        'api_key'    => env('GEMINI_API_KEY'),
+        'ssl_verify' => env('GEMINI_SSL_VERIFY', true),
+        'ca_bundle'  => env('GEMINI_CA_BUNDLE'),
+        'model'      => env('GEMINI_MODEL', 'gemini-flash-lite-latest'),
+        'fallback_models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GEMINI_FALLBACK_MODELS', 'gemini-2.0-flash-lite,gemini-2.0-flash,gemini-2.5-flash-lite'))
+        ))),
+    ],
+
 ];
