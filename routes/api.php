@@ -1,12 +1,18 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\WeeklyGoalController;
 
 Route::get('/health', fn () => response()->json(['status' => 'API working']));
+
+Route::get('/run-migrations', function () {
+    Artisan::call('migrate', ['--force' => true]);
+    return response()->json(['status' => 'Migrations run', 'output' => Artisan::output()]);
+});
 
 Route::group([
     'middleware' => 'api',
