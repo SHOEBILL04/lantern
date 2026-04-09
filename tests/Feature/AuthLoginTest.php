@@ -59,4 +59,28 @@ class AuthLoginTest extends TestCase
                 'error' => 'Unauthorized',
             ]);
     }
+
+    public function test_google_only_user_cannot_login_with_password(): void
+    {
+        $email = 'ci-login-google-' . uniqid() . '@example.com';
+
+        User::create([
+            'name' => 'Google Only User',
+            'email' => $email,
+            'password' => Hash::make('server-generated-password'),
+            'google_id' => 'ci-google-id-' . uniqid(),
+            'auth_provider' => 'google',
+        ]);
+
+        $response = $this->postJson('/api/auth/login', [
+            'email' => $email,
+            'password' => 'password123',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJson([
+                'error' => 'This account uses Google sign-in. Please click Continue with Google.',
+            ]);
+    }
 }

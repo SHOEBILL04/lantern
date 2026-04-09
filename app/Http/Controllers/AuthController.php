@@ -45,6 +45,14 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        $user = User::where('email', $validated['email'])->first();
+
+        if ($user && $user->auth_provider === 'google' && ! empty($user->google_id)) {
+            return response()->json([
+                'error' => 'This account uses Google sign-in. Please click Continue with Google.',
+            ], 422);
+        }
+
         $credentials = $request->only('email', 'password');
 
         if (! $token = auth()->attempt($credentials)) {
