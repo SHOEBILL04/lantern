@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
 use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class GoogleAuthTest extends TestCase
@@ -26,6 +28,7 @@ class GoogleAuthTest extends TestCase
     {
         Socialite::shouldReceive('driver')->once()->with('google')->andReturnSelf();
         Socialite::shouldReceive('stateless')->once()->andReturnSelf();
+        Socialite::shouldReceive('redirectUrl')->once()->with('http://localhost:8000/api/auth/google/callback')->andReturnSelf();
         Socialite::shouldReceive('redirect')->once()->andReturn(
             redirect('https://accounts.google.com/o/oauth2/auth')
         );
@@ -49,6 +52,7 @@ class GoogleAuthTest extends TestCase
 
         Socialite::shouldReceive('driver')->once()->with('google')->andReturnSelf();
         Socialite::shouldReceive('stateless')->once()->andReturnSelf();
+        Socialite::shouldReceive('redirectUrl')->once()->with('http://localhost:8000/api/auth/google/callback')->andReturnSelf();
         Socialite::shouldReceive('user')->once()->andReturn($socialiteUser);
 
         $response = $this->get('/api/auth/google/callback');
@@ -90,6 +94,7 @@ class GoogleAuthTest extends TestCase
 
         Socialite::shouldReceive('driver')->once()->with('google')->andReturnSelf();
         Socialite::shouldReceive('stateless')->once()->andReturnSelf();
+        Socialite::shouldReceive('redirectUrl')->once()->with('http://localhost:8000/api/auth/google/callback')->andReturnSelf();
         Socialite::shouldReceive('user')->once()->andReturn($socialiteUser);
 
         $response = $this->get('/api/auth/google/callback');
@@ -104,5 +109,35 @@ class GoogleAuthTest extends TestCase
         $this->assertSame('local', $existing->auth_provider);
         $this->assertSame('https://example.com/new-avatar.png', $existing->avatar_url);
         $this->assertNotNull($existing->email_verified_at);
+    }
+
+    public function test_google_callback_failure_redirects_with_error_code_and_logs_details(): void
+    {
+        Log::spy();
+
+        Socialite::shouldReceive('driver')->once()->with('google')->andReturnSelf();
+        Socialite::shouldReceive('stateless')->once()->andReturnSelf();
+        Socialite::shouldReceive('redirectUrl')->once()->with('http://localhost:8000/api/auth/google/callback')->andReturnSelf();
+        Socialite::shouldReceive('user')->once()->andThrow(new RuntimeException('invalid_client from google oauth'));
+
+        $response = $this->get('/api/auth/google/callback');
+
+        $response->assertStatus(302);
+
+        $location = $response->headers->get('Location');
+        $this->assertNotNull($location);
+        $this->assertStringContainsString('http://localhost:5173/login', $location);
+        $this->assertStringContainsString('error=google_auth_failed', $location);
+        $this->assertStringContainsString('debug=invalid_client', $location);
+
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Google OAuth callback failed'
+                    && ($context['exception_class'] ?? null) === RuntimeException::class
+                    && str_contains((string) ($context['exception_message'] ?? ''), 'invalid_client')
+                    && ! empty($context['trace'])
+                    && ($context['resolved_google_redirect_uri'] ?? null) === 'http://localhost:8000/api/auth/google/callback';
+            });
     }
 }
