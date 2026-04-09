@@ -10,8 +10,22 @@ use App\Http\Controllers\WeeklyGoalController;
 Route::get('/health', fn () => response()->json(['status' => 'API working']));
 
 Route::get('/run-migrations', function () {
-    Artisan::call('migrate', ['--force' => true]);
-    return response()->json(['status' => 'Migrations run', 'output' => Artisan::output()]);
+    try {
+        $path = base_path('schema.sql');
+        if (!file_exists($path)) {
+            return response()->json(['error' => 'schema.sql not found'], 404);
+        }
+
+        $sql = file_get_contents($path);
+        
+        // Remove comments and split by delimiter if needed, 
+        // but for simplicity we can try executing it via DB::unprepared
+        \Illuminate\Support\Facades\DB::unprepared($sql);
+
+        return response()->json(['status' => 'Schema applied successfully']);
+    } catch (\Exception $e) {
+        return response()->json(['status' => 'Error', 'message' => $e->getMessage()], 500);
+    }
 });
 
 Route::group([
