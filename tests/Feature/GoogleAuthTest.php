@@ -14,6 +14,11 @@ use Tests\TestCase;
 
 class GoogleAuthTest extends TestCase
 {
+    private function frontendBaseUrl(): string
+    {
+        return rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/');
+    }
+
     protected function tearDown(): void
     {
         DB::table('users')
@@ -58,7 +63,7 @@ class GoogleAuthTest extends TestCase
         $response = $this->get('/api/auth/google/callback');
 
         $response
-            ->assertRedirect('http://localhost:5173/auth/google/success')
+            ->assertRedirect($this->frontendBaseUrl().'/auth/google/success')
             ->assertCookie('token');
 
         $this->assertDatabaseHas('users', [
@@ -100,7 +105,7 @@ class GoogleAuthTest extends TestCase
         $response = $this->get('/api/auth/google/callback');
 
         $response
-            ->assertRedirect('http://localhost:5173/auth/google/success')
+            ->assertRedirect($this->frontendBaseUrl().'/auth/google/success')
             ->assertCookie('token');
 
         $existing->refresh();
@@ -126,7 +131,7 @@ class GoogleAuthTest extends TestCase
 
         $location = $response->headers->get('Location');
         $this->assertNotNull($location);
-        $this->assertStringContainsString('http://localhost:5173/login', $location);
+        $this->assertStringContainsString($this->frontendBaseUrl().'/login', $location);
         $this->assertStringContainsString('error=google_auth_misconfigured', $location);
         $this->assertStringContainsString('debug=invalid_client', $location);
 
