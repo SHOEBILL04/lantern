@@ -13,7 +13,15 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(
     localStorage.getItem("isAuthenticated") === "true"
   );
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")) || null);
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem("user");
+      return (savedUser && savedUser !== "undefined") ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      console.error("Failed to parse user from localStorage", e);
+      return null;
+    }
+  });
   const [authLoading, setAuthLoading] = useState(true);
 
   const persistAuthenticatedUser = (authenticatedUser) => {
