@@ -5,11 +5,6 @@ import { ENDPOINTS } from "../api/endpoints";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // Force cleanup of legacy token immediately on load
-  if (localStorage.getItem("token")) {
-    localStorage.removeItem("token");
-  }
-
   const [isAuthenticated, setIsAuthenticated] = useState(
     localStorage.getItem("isAuthenticated") === "true"
   );
@@ -23,31 +18,31 @@ export const AuthProvider = ({ children }) => {
     }
   });
   const [authLoading, setAuthLoading] = useState(true);
-const persistAuthenticatedUser = (authenticatedUser, token) => {
-  setIsAuthenticated(true);
-  setUser(authenticatedUser);
-  localStorage.setItem("isAuthenticated", "true");
-  localStorage.setItem("user", JSON.stringify(authenticatedUser));
-  if (token) {
-    localStorage.setItem("token", token);
-  }
-};
 
-const clearAuthState = () => {
-  setIsAuthenticated(false);
-  setUser(null);
-  localStorage.removeItem("isAuthenticated");
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-};
+  const persistAuthenticatedUser = (authenticatedUser, token) => {
+    setIsAuthenticated(true);
+    setUser(authenticatedUser);
+    localStorage.setItem("isAuthenticated", "true");
+    localStorage.setItem("user", JSON.stringify(authenticatedUser));
+    if (token) {
+      localStorage.setItem("token", token);
+    }
+  };
 
-const login = async (email, password) => {
-  try {
-    const response = await api.post(ENDPOINTS.LOGIN, { email, password });
-    persistAuthenticatedUser(response.data.user, response.data.access_token);
-    return { success: true };
-  } catch (error) {
-...
+  const clearAuthState = () => {
+    setIsAuthenticated(false);
+    setUser(null);
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+  };
+
+  const login = async (email, password) => {
+    try {
+      const response = await api.post(ENDPOINTS.LOGIN, { email, password });
+      persistAuthenticatedUser(response.data.user, response.data.access_token);
+      return { success: true };
+    } catch (error) {
       console.error("Login failed:", error);
       return {
         success: false,
@@ -55,13 +50,13 @@ const login = async (email, password) => {
       };
     }
   };
-const register = async (name, email, password) => {
-  try {
-    const response = await api.post(ENDPOINTS.REGISTER, { name, email, password });
-    persistAuthenticatedUser(response.data.user, response.data.access_token);
-    return { success: true };
-  } catch (error) {
-...
+
+  const register = async (name, email, password) => {
+    try {
+      const response = await api.post(ENDPOINTS.REGISTER, { name, email, password });
+      persistAuthenticatedUser(response.data.user, response.data.access_token);
+      return { success: true };
+    } catch (error) {
       console.error("Registration failed:", error);
       return {
         success: false,
@@ -83,7 +78,7 @@ const register = async (name, email, password) => {
 
   const syncAuthFromServer = async () => {
     try {
-      const response = await api.post(ENDPOINTS.ME); // Using POST as defined in api.php
+      const response = await api.post(ENDPOINTS.ME);
       persistAuthenticatedUser(response.data);
       return { success: true, user: response.data };
     } catch (error) {
