@@ -109,6 +109,7 @@ class AuthController extends Controller
         $cookie = $this->tokenCookie($token, $minutes);
 
         return response()->json([
+            'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => $minutes * 60,
             'user' => auth()->user()

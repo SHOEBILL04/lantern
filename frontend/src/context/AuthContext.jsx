@@ -23,28 +23,31 @@ export const AuthProvider = ({ children }) => {
     }
   });
   const [authLoading, setAuthLoading] = useState(true);
+const persistAuthenticatedUser = (authenticatedUser, token) => {
+  setIsAuthenticated(true);
+  setUser(authenticatedUser);
+  localStorage.setItem("isAuthenticated", "true");
+  localStorage.setItem("user", JSON.stringify(authenticatedUser));
+  if (token) {
+    localStorage.setItem("token", token);
+  }
+};
 
-  const persistAuthenticatedUser = (authenticatedUser) => {
-    setIsAuthenticated(true);
-    setUser(authenticatedUser);
-    localStorage.setItem("isAuthenticated", "true");
-    localStorage.setItem("user", JSON.stringify(authenticatedUser));
-  };
+const clearAuthState = () => {
+  setIsAuthenticated(false);
+  setUser(null);
+  localStorage.removeItem("isAuthenticated");
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+};
 
-  const clearAuthState = () => {
-    setIsAuthenticated(false);
-    setUser(null);
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("user");
-    localStorage.removeItem("token"); // Cleanup legacy token
-  };
-
-  const login = async (email, password) => {
-    try {
-      const response = await api.post(ENDPOINTS.LOGIN, { email, password });
-      persistAuthenticatedUser(response.data.user);
-      return { success: true };
-    } catch (error) {
+const login = async (email, password) => {
+  try {
+    const response = await api.post(ENDPOINTS.LOGIN, { email, password });
+    persistAuthenticatedUser(response.data.user, response.data.access_token);
+    return { success: true };
+  } catch (error) {
+...
       console.error("Login failed:", error);
       return {
         success: false,
@@ -52,13 +55,13 @@ export const AuthProvider = ({ children }) => {
       };
     }
   };
-
-  const register = async (name, email, password) => {
-    try {
-      const response = await api.post(ENDPOINTS.REGISTER, { name, email, password });
-      persistAuthenticatedUser(response.data.user);
-      return { success: true };
-    } catch (error) {
+const register = async (name, email, password) => {
+  try {
+    const response = await api.post(ENDPOINTS.REGISTER, { name, email, password });
+    persistAuthenticatedUser(response.data.user, response.data.access_token);
+    return { success: true };
+  } catch (error) {
+...
       console.error("Registration failed:", error);
       return {
         success: false,
