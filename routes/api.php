@@ -1,58 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\WeeklyGoalController;
 
 Route::get('/health', fn () => response()->json(['status' => 'API working']));
-
-Route::get('/run-migrations', function () {
-    try {
-        $path = base_path('schema.sql');
-        if (!file_exists($path)) {
-            return response()->json(['error' => 'schema.sql not found'], 404);
-        }
-
-        $sql = file_get_contents($path);
-        
-        // Remove comments
-        $sql = preg_replace('/--.*$/m', '', $sql);
-        $sql = preg_replace('/\/\*.*?\*\//s', '', $sql);
-
-        // Split by semicolon, but be careful with triggers/procedures
-        // Since DB::unprepared failed with DELIMITER, we will split the basic tables first
-        // and skip the complex parts for now just to get the users table working.
-        
-        $statements = explode(';', $sql);
-        $executed = 0;
-        $errors = [];
-
-        foreach ($statements as $statement) {
-            $statement = trim($statement);
-            if (empty($statement) || stripos($statement, 'DELIMITER') === 0 || stripos($statement, 'CREATE DATABASE') === 0 || stripos($statement, 'CREATE USER') === 0 || stripos($statement, 'GRANT') === 0 || stripos($statement, 'USE ') === 0) {
-                continue;
-            }
-            
-            try {
-                \Illuminate\Support\Facades\DB::unprepared($statement . ';');
-                $executed++;
-            } catch (\Exception $e) {
-                $errors[] = "Error in: " . substr($statement, 0, 50) . "... : " . $e->getMessage();
-            }
-        }
-
-        return response()->json([
-            'status' => 'Process completed', 
-            'statements_executed' => $executed,
-            'errors' => $errors
-        ]);
-    } catch (\Exception $e) {
-        return response()->json(['status' => 'Error', 'message' => $e->getMessage()], 500);
-    }
-});
 
 Route::group([
     'middleware' => 'api',
