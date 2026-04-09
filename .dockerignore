@@ -16,5 +16,4 @@ phpunit.xml
 .gitattributes
 README.md
 docker-compose.yml
-schema.sql
 frontend
