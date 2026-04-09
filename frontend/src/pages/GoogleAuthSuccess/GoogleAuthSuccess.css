@@ -1,0 +1,30 @@
+.googleSuccessPage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 55%, #0b1120 100%);
+}
+
+.googleSuccessCard {
+  width: 100%;
+  max-width: 460px;
+  text-align: center;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+  color: #f8fafc;
+  padding: 1.5rem 1.25rem;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
+}
+
+.googleSuccessCard h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.googleSuccessCard p {
+  margin: 0.55rem 0 0;
+  color: #cbd5e1;
+}

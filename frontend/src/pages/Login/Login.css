@@ -245,6 +245,41 @@
   cursor: not-allowed;
 }
 
+.loginDivider {
+  margin-top: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+
+.loginDivider::before,
+.loginDivider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.loginDivider span {
+  margin: 0 10px;
+}
+
+.loginGoogleButton {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.loginGoogleButton:hover {
+  border-color: rgba(110, 193, 255, 0.9);
+}
+
 .loginFooterText {
   margin-top: 16px;
   text-align: center;

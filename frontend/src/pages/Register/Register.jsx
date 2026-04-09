@@ -24,6 +24,12 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const handleGoogleSignIn = () => {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const redirectPath = import.meta.env.VITE_GOOGLE_REDIRECT_PATH || "/auth/google/redirect";
+    window.location.href = `${apiUrl}${redirectPath}`;
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/dashboard");
@@ -186,6 +192,14 @@ export default function Register() {
               {loading ? "Registering..." : "Register"}
             </button>
           </form>
+
+          <div className="registerDivider" aria-hidden="true">
+            <span>or</span>
+          </div>
+
+          <button type="button" className="registerGoogleButton" onClick={handleGoogleSignIn}>
+            Continue with Google
+          </button>
 
           <p className="registerFooterText">
             Already have an account?{" "}

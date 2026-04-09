@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useEffect, useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
@@ -11,6 +11,7 @@ import loginBg from "../../assets/images/login-reg-bg.png";
 export default function Login() {
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +26,38 @@ export default function Login() {
       navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const errorCode = params.get("error");
+    const debugHint = params.get("debug");
+    const debugSuffix = import.meta.env.DEV && debugHint ? ` (Debug: ${debugHint})` : "";
+
+    if (errorCode === "google_sync_failed") {
+      setError("Google sign-in could not be completed. Please try again.");
+      return;
+    }
+
+    if (errorCode === "google_auth_failed") {
+      setError(`Google sign-in failed. Please try again.${debugSuffix}`);
+      return;
+    }
+
+    if (errorCode === "google_auth_misconfigured") {
+      setError(`Google sign-in is currently misconfigured. Check server OAuth setup.${debugSuffix}`);
+      return;
+    }
+
+    if (errorCode === "google_auth_incomplete_profile") {
+      setError("Your Google account is missing required profile details.");
+    }
+  }, [location.search]);
+
+  const handleGoogleSignIn = () => {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const redirectPath = import.meta.env.VITE_GOOGLE_REDIRECT_PATH || "/auth/google/redirect";
+    window.location.href = `${apiUrl}${redirectPath}`;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -108,6 +141,14 @@ export default function Login() {
               {loading ? "Signing In..." : "Login"}
             </button>
           </form>
+
+          <div className="loginDivider" aria-hidden="true">
+            <span>or</span>
+          </div>
+
+          <button type="button" className="loginGoogleButton" onClick={handleGoogleSignIn}>
+            Continue with Google
+          </button>
 
           <p className="loginFooterText">
             Don&apos;t have an account?{" "}

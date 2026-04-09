@@ -263,6 +263,41 @@
   cursor: not-allowed;
 }
 
+.registerDivider {
+  margin-top: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+
+.registerDivider::before,
+.registerDivider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.registerDivider span {
+  margin: 0 10px;
+}
+
+.registerGoogleButton {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.registerGoogleButton:hover {
+  border-color: rgba(110, 193, 255, 0.9);
+}
+
 .registerFooterText {
   margin-top: 16px;
   text-align: center;
