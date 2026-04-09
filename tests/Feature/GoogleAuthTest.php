@@ -127,7 +127,7 @@ class GoogleAuthTest extends TestCase
         $location = $response->headers->get('Location');
         $this->assertNotNull($location);
         $this->assertStringContainsString('http://localhost:5173/login', $location);
-        $this->assertStringContainsString('error=google_auth_failed', $location);
+        $this->assertStringContainsString('error=google_auth_misconfigured', $location);
         $this->assertStringContainsString('debug=invalid_client', $location);
 
         Log::shouldHaveReceived('error')
@@ -137,7 +137,9 @@ class GoogleAuthTest extends TestCase
                     && ($context['exception_class'] ?? null) === RuntimeException::class
                     && str_contains((string) ($context['exception_message'] ?? ''), 'invalid_client')
                     && ! empty($context['trace'])
-                    && ($context['resolved_google_redirect_uri'] ?? null) === 'http://localhost:8000/api/auth/google/callback';
+                    && ($context['resolved_google_redirect_uri'] ?? null) === 'http://localhost:8000/api/auth/google/callback'
+                    && ($context['error_code'] ?? null) === 'google_auth_misconfigured'
+                    && ($context['debug_hint'] ?? null) === 'invalid_client';
             });
     }
 }

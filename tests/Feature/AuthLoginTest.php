@@ -33,6 +33,7 @@ class AuthLoginTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertCookie('token')
             ->assertJsonStructure([
                 'token_type',
                 'expires_in',

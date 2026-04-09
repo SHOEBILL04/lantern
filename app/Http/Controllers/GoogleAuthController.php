@@ -28,6 +28,9 @@ class GoogleAuthController extends Controller
         try {
             $googleUser = $this->googleProvider()->user();
         } catch (Throwable $e) {
+            $debugHint = $this->safeDebugHint($e);
+            $errorCode = $this->errorCodeForDebugHint($debugHint);
+
             Log::error('Google OAuth callback failed', [
                 'exception_class' => $e::class,
                 'exception_message' => $e->getMessage(),
@@ -36,14 +39,16 @@ class GoogleAuthController extends Controller
                 'resolved_google_redirect_uri' => $this->googleRedirectUri(),
                 'request_full_url' => request()->fullUrl(),
                 'request_query' => request()->query(),
+                'error_code' => $errorCode,
+                'debug_hint' => $debugHint,
             ]);
 
             $query = [
-                'error' => 'google_auth_failed',
+                'error' => $errorCode,
             ];
 
             if ($this->shouldExposeDebugHint()) {
-                $query['debug'] = $this->safeDebugHint($e);
+                $query['debug'] = $debugHint;
             }
 
             return redirect()->to($this->frontendUrl('/login', $query));
@@ -99,7 +104,7 @@ class GoogleAuthController extends Controller
 
         $token = auth('api')->login($user);
         $minutes = auth('api')->factory()->getTTL();
-        $cookie = cookie('token', $token, $minutes, '/', null, false, true, false, 'Lax');
+        $cookie = $this->tokenCookie($token, $minutes);
 
         return redirect()
             ->to($this->frontendUrl('/auth/google/success'))
@@ -172,6 +177,15 @@ class GoogleAuthController extends Controller
         return Str::snake(class_basename($e));
     }
 
+    private function errorCodeForDebugHint(string $debugHint): string
+    {
+        if (in_array($debugHint, ['redirect_uri_mismatch', 'invalid_client'], true)) {
+            return 'google_auth_misconfigured';
+        }
+
+        return 'google_auth_failed';
+    }
+
     private function logRedirectMismatchIfNeeded(): void
     {
         $configured = (string) config('services.google.redirect');
@@ -186,5 +200,14 @@ class GoogleAuthController extends Controller
                 'expected_google_redirect_uri' => self::LOCAL_GOOGLE_CALLBACK_URI,
             ]);
         }
+    }
+
+    private function tokenCookie(string $token, int $minutes)
+    {
+        $secure = app()->environment('production') || request()->isSecure();
+        $sameSite = $secure ? 'None' : 'Lax';
+        $domain = env('SESSION_DOMAIN');
+
+        return cookie('token', $token, $minutes, '/', $domain, $secure, true, false, $sameSite);
     }
 }

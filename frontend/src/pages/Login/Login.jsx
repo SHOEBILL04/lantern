@@ -31,6 +31,7 @@ export default function Login() {
     const params = new URLSearchParams(location.search);
     const errorCode = params.get("error");
     const debugHint = params.get("debug");
+    const debugSuffix = import.meta.env.DEV && debugHint ? ` (Debug: ${debugHint})` : "";
 
     if (errorCode === "google_sync_failed") {
       setError("Google sign-in could not be completed. Please try again.");
@@ -38,17 +39,12 @@ export default function Login() {
     }
 
     if (errorCode === "google_auth_failed") {
-      const baseMessage = "Google sign-in failed. Please try again.";
-      if (import.meta.env.DEV && debugHint) {
-        setError(`${baseMessage} (Debug: ${debugHint})`);
-        return;
-      }
-      setError(baseMessage);
+      setError(`Google sign-in failed. Please try again.${debugSuffix}`);
       return;
     }
 
     if (errorCode === "google_auth_misconfigured") {
-      setError("Google sign-in is currently misconfigured. Please contact support.");
+      setError(`Google sign-in is currently misconfigured. Check server OAuth setup.${debugSuffix}`);
       return;
     }
 
