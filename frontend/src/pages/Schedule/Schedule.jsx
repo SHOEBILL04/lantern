@@ -194,12 +194,7 @@ export default function Schedule() {
     };
 
     if (loading) {
-        return (
-            <div className="schedule-page schedule-page--loading">
-                <h1 className="schedule-title">Schedule</h1>
-                <p className="schedule-subtitle">Loading your schedule...</p>
-            </div>
-        );
+        return <ScheduleLoadingSkeleton />;
     }
 
     return (
@@ -343,6 +338,95 @@ export default function Schedule() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    );
+}
+
+function ScheduleLoadingSkeleton() {
+    return (
+        <div className="schedule-page schedule-page--loading" aria-busy="true" aria-live="polite">
+            <div className="schedule-hero">
+                <div className="schedule-loading-copy">
+                    <div className="schedule-skeleton schedule-skeleton-title" />
+                    <div className="schedule-skeleton schedule-skeleton-subtitle" />
+                </div>
+                <div className="schedule-today-badge schedule-today-badge--loading">
+                    <div className="schedule-skeleton schedule-skeleton-today-label" />
+                    <div className="schedule-skeleton schedule-skeleton-today-value" />
+                </div>
+            </div>
+
+            <div className="schedule-layout">
+                <aside className="schedule-sidebar">
+                    <div className="schedule-sidebar-header">
+                        <div className="schedule-skeleton schedule-skeleton-section-title" />
+                        <div className="schedule-skeleton schedule-skeleton-section-meta" />
+                    </div>
+
+                    <div className="schedule-subject-list">
+                        {[1, 2, 3].map((subjectIndex) => (
+                            <div key={`loading-subject-${subjectIndex}`} className="schedule-subject-card schedule-subject-card--loading">
+                                <div className="schedule-subject-header-row">
+                                    <div className="schedule-subject-heading">
+                                        <div className="schedule-skeleton schedule-skeleton-dot" />
+                                        <div className="schedule-skeleton schedule-skeleton-subject-name" />
+                                    </div>
+                                    <div className="schedule-skeleton schedule-skeleton-task-count" />
+                                </div>
+                                <div className="schedule-task-stack">
+                                    {[1, 2].map((taskIndex) => (
+                                        <div key={`loading-task-${subjectIndex}-${taskIndex}`} className="schedule-task-chip schedule-task-chip--loading">
+                                            <div className="schedule-skeleton schedule-skeleton-chip-label" />
+                                            <div className="schedule-skeleton schedule-skeleton-chip-title" />
+                                            <div className="schedule-skeleton schedule-skeleton-chip-meta" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </aside>
+
+                <section className="schedule-calendar-panel">
+                    <div className="schedule-calendar-header">
+                        <div>
+                            <div className="schedule-skeleton schedule-skeleton-section-title" />
+                            <div className="schedule-skeleton schedule-skeleton-calendar-subtext" />
+                        </div>
+                        <div className="schedule-calendar-legend">
+                            <div className="schedule-skeleton schedule-skeleton-legend-pill" />
+                            <div className="schedule-skeleton schedule-skeleton-legend-pill schedule-skeleton-legend-pill--wide" />
+                        </div>
+                    </div>
+
+                    <div className="schedule-calendar-scroll">
+                        <div className="schedule-calendar-frame">
+                            <div className="schedule-weekday-row">
+                                {DAYS.map((day) => (
+                                    <div key={`loading-weekday-${day}`} className="schedule-weekday-cell">
+                                        <div className="schedule-skeleton schedule-skeleton-weekday" />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="schedule-calendar-grid">
+                                {Array.from({ length: 35 }).map((_, index) => (
+                                    <div key={`loading-cell-${index}`} className="schedule-day-cell schedule-day-cell--loading">
+                                        <div className="schedule-day-cell-header">
+                                            <div className="schedule-skeleton schedule-skeleton-day-number" />
+                                            <div className="schedule-skeleton schedule-skeleton-drop-hint" />
+                                        </div>
+                                        <div className="schedule-day-task-list">
+                                            <div className="schedule-skeleton schedule-skeleton-day-task" />
+                                            <div className="schedule-skeleton schedule-skeleton-day-task schedule-skeleton-day-task--short" />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
