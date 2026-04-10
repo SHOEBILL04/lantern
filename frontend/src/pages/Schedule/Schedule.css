@@ -27,6 +27,79 @@
   box-sizing: border-box;
 }
 
+.schedule-feedback {
+  position: fixed;
+  top: 7.7rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: min(620px, calc(100vw - 2rem));
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid transparent;
+  box-shadow: 0 16px 36px rgba(2, 6, 23, 0.55);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.schedule-feedback--success {
+  background: rgba(20, 83, 45, 0.96);
+  border-color: rgba(74, 222, 128, 0.55);
+  color: #dcfce7;
+}
+
+.schedule-feedback--error {
+  background: rgba(127, 29, 29, 0.96);
+  border-color: rgba(252, 165, 165, 0.55);
+  color: #fee2e2;
+}
+
+.schedule-feedback-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.schedule-error-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(252, 165, 165, 0.55);
+  background: rgba(55, 17, 17, 0.92);
+  color: #fecaca;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.schedule-error-retry-btn {
+  border: 1px solid rgba(248, 113, 113, 0.65);
+  background: rgba(127, 29, 29, 0.85);
+  color: #fee2e2;
+  border-radius: 0.75rem;
+  padding: 0.42rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.schedule-error-retry-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(252, 165, 165, 0.95);
+}
+
 .schedule-page a {
   color: #60a5fa;
 }
@@ -611,6 +684,11 @@
 }
 
 @media (max-width: 768px) {
+  .schedule-feedback {
+    top: 6.8rem;
+    width: calc(100vw - 1.5rem);
+  }
+
   .schedule-page {
     min-height: auto;
     padding: 1rem 0.85rem 1.2rem;
@@ -732,6 +810,11 @@
 }
 
 @media (max-width: 520px) {
+  .schedule-error-panel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .schedule-weekday-row,
   .schedule-calendar-grid {
     gap: 0.3rem;
