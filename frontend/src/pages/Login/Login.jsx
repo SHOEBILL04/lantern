@@ -33,8 +33,13 @@ export default function Login() {
     const debugHint = params.get("debug");
     const debugSuffix = import.meta.env.DEV && debugHint ? ` (Debug: ${debugHint})` : "";
 
+    if (!errorCode) {
+      setError("");
+      return;
+    }
+
     if (errorCode === "google_sync_failed") {
-      setError("Google sign-in could not be completed. Please try again.");
+      setError("We could not complete Google sign-in. Please try again.");
       return;
     }
 
@@ -44,18 +49,27 @@ export default function Login() {
     }
 
     if (errorCode === "google_auth_misconfigured") {
-      setError(`Google sign-in is currently misconfigured. Check server OAuth setup.${debugSuffix}`);
+      setError(`Google sign-in is temporarily unavailable. Please try again later.${debugSuffix}`);
       return;
     }
 
     if (errorCode === "google_auth_incomplete_profile") {
-      setError("Your Google account is missing required profile details.");
+      setError("Your Google account is missing required profile information. Please try a different account.");
+      return;
     }
+
+    setError("Google sign-in could not be completed. Please try again.");
   }, [location.search]);
 
   const handleGoogleSignIn = () => {
     const apiUrl = import.meta.env.VITE_API_URL;
     const redirectPath = import.meta.env.VITE_GOOGLE_REDIRECT_PATH || "/auth/google/redirect";
+
+    if (!apiUrl) {
+      setError("Google sign-in is unavailable right now. Please try email and password.");
+      return;
+    }
+
     window.location.href = `${apiUrl}${redirectPath}`;
   };
 
@@ -99,7 +113,12 @@ export default function Login() {
                 placeholder="email@example.com"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) {
+                    setError("");
+                  }
+                }}
                 autoComplete="email"
               />
             </div>
@@ -114,7 +133,12 @@ export default function Login() {
                   placeholder="••••••••"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) {
+                      setError("");
+                    }
+                  }}
                   autoComplete="current-password"
                 />
 

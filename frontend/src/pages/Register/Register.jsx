@@ -27,6 +27,12 @@ export default function Register() {
   const handleGoogleSignIn = () => {
     const apiUrl = import.meta.env.VITE_API_URL;
     const redirectPath = import.meta.env.VITE_GOOGLE_REDIRECT_PATH || "/auth/google/redirect";
+
+    if (!apiUrl) {
+      setError("Google sign-in is unavailable right now. Please use email and password.");
+      return;
+    }
+
     window.location.href = `${apiUrl}${redirectPath}`;
   };
 
@@ -45,13 +51,13 @@ export default function Register() {
 
     // Name can't be blank or only spaces
     if (!cleanName) {
-      setError("Full name cannot be empty or only spaces.");
+      setError("Please enter your full name.");
       return;
     }
 
     // Email must end with @gmail.com (case/space safe)
     if (!cleanEmail.endsWith("@gmail.com")) {
-      setError("Email must end with @gmail.com");
+      setError("Please use a valid Gmail address (example@gmail.com).");
       return;
     }
 
@@ -63,7 +69,7 @@ export default function Register() {
 
     // Confirm password match
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError("Passwords do not match. Please re-enter both fields.");
       return;
     }
 
@@ -84,7 +90,7 @@ export default function Register() {
         setError(result.message);
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError("We could not create your account right now. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -118,7 +124,12 @@ export default function Register() {
                 placeholder="enter your name"
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (error) {
+                    setError("");
+                  }
+                }}
                 autoComplete="name"
               />
             </div>
@@ -131,7 +142,12 @@ export default function Register() {
                 placeholder="example@gmail.com"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) {
+                    setError("");
+                  }
+                }}
                 autoComplete="email"
               />
             </div>
@@ -145,7 +161,12 @@ export default function Register() {
                   placeholder="enter your password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) {
+                      setError("");
+                    }
+                  }}
                   autoComplete="new-password"
                 />
                 <button
@@ -168,7 +189,12 @@ export default function Register() {
                   placeholder="confirm your password"
                   required
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (error) {
+                      setError("");
+                    }
+                  }}
                   autoComplete="new-password"
                 />
                 <button
