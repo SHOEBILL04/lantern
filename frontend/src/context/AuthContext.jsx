@@ -4,6 +4,96 @@ import { ENDPOINTS } from "../api/endpoints";
 
 const AuthContext = createContext();
 
+const normalizeServerMessage = (message) => {
+  if (typeof message !== "string") {
+    return "";
+  }
+
+  const trimmed = message.trim();
+  const normalized = trimmed.toLowerCase();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  if (normalized === "unauthorized") {
+    return "Email or password is incorrect. Please try again.";
+  }
+
+  if (normalized.includes("google sign-in")) {
+    return "This account uses Google sign-in. Please continue with Google.";
+  }
+
+  if (normalized.includes("email has already been taken")) {
+    return "An account with this email already exists. Please log in instead.";
+  }
+
+  if (normalized.includes("name field is required")) {
+    return "Please enter your full name.";
+  }
+
+  if (normalized.includes("email field is required")) {
+    return "Please enter your email address.";
+  }
+
+  if (normalized.includes("email must be a valid email address")) {
+    return "Please enter a valid email address.";
+  }
+
+  if (normalized.includes("password field is required")) {
+    return "Please enter your password.";
+  }
+
+  if (normalized.includes("password must be at least")) {
+    return "Password must be at least 8 characters long.";
+  }
+
+  return trimmed;
+};
+
+const getFirstValidationMessage = (errors) => {
+  if (!errors || typeof errors !== "object") {
+    return "";
+  }
+
+  for (const fieldErrors of Object.values(errors)) {
+    if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+      return normalizeServerMessage(fieldErrors[0]);
+    }
+  }
+
+  return "";
+};
+
+const getFriendlyAuthMessage = (error, fallbackMessage) => {
+  if (!error?.response) {
+    return "We could not reach the server. Please check your internet connection and try again.";
+  }
+
+  const { status, data = {} } = error.response;
+  const validationMessage = getFirstValidationMessage(data.errors);
+
+  if (validationMessage) {
+    return validationMessage;
+  }
+
+  const normalizedServerMessage = normalizeServerMessage(data.message || data.error);
+
+  if (status === 401) {
+    return normalizedServerMessage || "Email or password is incorrect. Please try again.";
+  }
+
+  if (status === 429) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+
+  if (status >= 500) {
+    return "Something went wrong on our side. Please try again in a moment.";
+  }
+
+  return normalizedServerMessage || fallbackMessage;
+};
+
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(
     localStorage.getItem("isAuthenticated") === "true"
@@ -46,7 +136,10 @@ export const AuthProvider = ({ children }) => {
       console.error("Login failed:", error);
       return {
         success: false,
-        message: error.response?.data?.error || error.response?.data?.message || "Invalid credentials"
+        message: getFriendlyAuthMessage(
+          error,
+          "We could not sign you in right now. Please try again."
+        ),
       };
     }
   };
@@ -60,7 +153,10 @@ export const AuthProvider = ({ children }) => {
       console.error("Registration failed:", error);
       return {
         success: false,
-        message: error.response?.data?.message || "Registration failed"
+        message: getFriendlyAuthMessage(
+          error,
+          "We could not create your account right now. Please try again."
+        ),
       };
     }
   };
