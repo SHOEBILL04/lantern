@@ -17,3 +17,12 @@ body.bg-dynamic {
   background: radial-gradient(circle at 70% 40%, #0b3d66, #021527, #000000);
   background-attachment: fixed;
 }
+
+.lanternWordmark {
+  font-family: "Monsta Fectro", sans-serif;
+  letter-spacing: 1px;
+  font-size: 22px;
+  line-height: 1;
+  color: #6ec1ff;
+  text-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+}
