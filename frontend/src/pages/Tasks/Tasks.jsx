@@ -15,6 +15,8 @@ export default function Tasks() {
     const [selectedTask, setSelectedTask] = useState(null);
     const [updateText, setUpdateText] = useState('');
     const [loading, setLoading] = useState(false);
+    const [tasksFetchError, setTasksFetchError] = useState('');
+    const [feedback, setFeedback] = useState(null);
 
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editTitleText, setEditTitleText] = useState('');
@@ -24,8 +26,87 @@ export default function Tasks() {
     }, []);
 
     useEffect(() => {
+        if (!feedback) return undefined;
+
+        const timeoutId = setTimeout(() => {
+            setFeedback(null);
+        }, 5000);
+
+        return () => clearTimeout(timeoutId);
+    }, [feedback]);
+
+    useEffect(() => {
         fetchTasks();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewMode, filters]);
+
+    const extractErrorMessage = (error, fallbackMessage) => {
+        const responseData = error?.response?.data;
+
+        if (responseData?.errors && typeof responseData.errors === 'object') {
+            const firstValidationError = Object.values(responseData.errors)
+                .flat()
+                .find(Boolean);
+            if (firstValidationError) return firstValidationError;
+        }
+
+        if (typeof responseData?.message === 'string' && responseData.message.trim()) {
+            return responseData.message;
+        }
+
+        if (typeof responseData === 'string' && responseData.trim()) {
+            return responseData;
+        }
+
+        return fallbackMessage;
+    };
+
+    const getTodayDateString = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const validateDueDate = (dateValue) => {
+        if (!dateValue) return { isValid: true };
+        const dateMatch = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!dateMatch) {
+            return {
+                isValid: false,
+                message: 'Invalid due date/time selected. Please choose a valid date.'
+            };
+        }
+
+        const year = Number(dateMatch[1]);
+        const month = Number(dateMatch[2]);
+        const day = Number(dateMatch[3]);
+        const parsedDate = new Date(Date.UTC(year, month - 1, day));
+
+        const isCalendarDateValid = (
+            parsedDate.getUTCFullYear() === year &&
+            parsedDate.getUTCMonth() + 1 === month &&
+            parsedDate.getUTCDate() === day
+        );
+
+        if (!isCalendarDateValid) {
+            return {
+                isValid: false,
+                message: 'Invalid due date/time selected. Please choose a valid date.'
+            };
+        }
+
+        const todayDateString = getTodayDateString();
+        if (dateValue < todayDateString) {
+            return {
+                isValid: false,
+                message: `Due date cannot be earlier than today (${todayDateString}).`
+            };
+        }
+
+        return { isValid: true };
+    };
 
     const fetchCoursesAndSubjects = async () => {
         try {
@@ -41,6 +122,7 @@ export default function Tasks() {
 
     const fetchTasks = async () => {
         setLoading(true);
+        setTasksFetchError('');
         try {
             const params = new URLSearchParams();
             if (filters.subject) params.append('subject', filters.subject);
@@ -64,6 +146,8 @@ export default function Tasks() {
             setTasks(fetchedTasks);
         } catch (error) {
             console.error('Error fetching tasks:', error);
+            setTasks([]);
+            setTasksFetchError(extractErrorMessage(error, 'Failed to load tasks. Please try again.'));
         } finally {
             setLoading(false);
         }
@@ -71,14 +155,30 @@ export default function Tasks() {
 
     const handleCreateTask = async (e) => {
         e.preventDefault();
+        const dueDateValidation = validateDueDate(newTask.due_date);
+        if (!dueDateValidation.isValid) {
+            setFeedback({
+                type: 'error',
+                message: dueDateValidation.message
+            });
+            return;
+        }
+
         try {
             await api.post(ENDPOINTS.TASKS, newTask);
             setIsCreateModalOpen(false);
             setNewTask({ title: '', course_id: '', subject: '', priority: 'medium', description: '', due_date: '' });
+            setFeedback({ type: 'success', message: 'Task added successfully.' });
             fetchTasks();
         } catch (error) {
             console.error('Error creating task:', error);
-            alert('Failed to create task. Make sure all required fields are filled.');
+            const dueDateError = error?.response?.data?.errors?.due_date?.[0];
+            setFeedback({
+                type: 'error',
+                message: dueDateError
+                    ? `Invalid due date/time selected. ${dueDateError}`
+                    : extractErrorMessage(error, 'Failed to create task. Please check your inputs and try again.')
+            });
         }
     };
 
@@ -90,6 +190,10 @@ export default function Tasks() {
             setIsEditingTitle(false);
         } catch (error) {
             console.error('Error fetching task details:', error);
+            setFeedback({
+                type: 'error',
+                message: extractErrorMessage(error, 'Unable to open task details. Please try again.')
+            });
         }
     };
 
@@ -105,6 +209,10 @@ export default function Tasks() {
             fetchTasks();
         } catch (err) {
             console.error('Error updating title:', err);
+            setFeedback({
+                type: 'error',
+                message: extractErrorMessage(err, 'Failed to update task title. Please try again.')
+            });
         }
     };
 
@@ -116,6 +224,10 @@ export default function Tasks() {
             fetchTasks();
         } catch (err) {
             console.error('Error updating status:', err);
+            setFeedback({
+                type: 'error',
+                message: extractErrorMessage(err, 'Failed to update task status. Please try again.')
+            });
         }
     };
 
@@ -131,6 +243,10 @@ export default function Tasks() {
             setUpdateText('');
         } catch (err) {
             console.error('Error adding update:', err);
+            setFeedback({
+                type: 'error',
+                message: extractErrorMessage(err, 'Failed to add task update. Please try again.')
+            });
         }
     };
 
@@ -140,8 +256,13 @@ export default function Tasks() {
             await api.delete(`${ENDPOINTS.TASKS}/${selectedTask.id}`);
             setSelectedTask(null);
             fetchTasks();
+            setFeedback({ type: 'success', message: 'Task deleted successfully.' });
         } catch (err) {
             console.error('Error deleting task:', err);
+            setFeedback({
+                type: 'error',
+                message: extractErrorMessage(err, 'Failed to delete task. Please try again.')
+            });
         }
     };
 
@@ -155,6 +276,20 @@ export default function Tasks() {
 
     return (
         <div className="tasks-page">
+            {feedback && (
+                <div className={`tasks-feedback tasks-feedback--${feedback.type}`} role="status" aria-live="polite">
+                    <span>{feedback.message}</span>
+                    <button
+                        type="button"
+                        className="tasks-feedback-close"
+                        aria-label="Dismiss message"
+                        onClick={() => setFeedback(null)}
+                    >
+                        &times;
+                    </button>
+                </div>
+            )}
+
             <div className="tasks-hero">
                 <div>
                     <h1 className="tasks-title">Tasks</h1>
@@ -220,6 +355,10 @@ export default function Tasks() {
             <div className="tasks-grid">
                 {loading ? (
                     <p className="tasks-empty">Loading tasks...</p>
+                ) : tasksFetchError ? (
+                    <div className="tasks-empty-card tasks-empty-card--error">
+                        <p>{tasksFetchError}</p>
+                    </div>
                 ) : tasks.length === 0 ? (
                     <div className="tasks-empty-card">
                         <p>No tasks found matching your criteria.</p>
@@ -279,6 +418,7 @@ export default function Tasks() {
                             </select>
                             <input
                                 type="date" className="tasks-form-input"
+                                min={getTodayDateString()}
                                 value={newTask.due_date} onChange={e => setNewTask({ ...newTask, due_date: e.target.value })}
                             />
                             <textarea

@@ -38,7 +38,7 @@ class TaskController extends Controller
             'subject' => 'nullable|string|max:255',
             'priority' => 'nullable|in:low,medium,high',
             'description' => 'nullable|string',
-            'due_date' => 'nullable|date',
+            'due_date' => 'nullable|date|after_or_equal:today',
         ]);
 
         $id = DB::table('tasks')->insertGetId([
@@ -77,7 +77,7 @@ class TaskController extends Controller
             'priority' => 'nullable|in:low,medium,high',
             'description' => 'nullable|string',
             'status' => 'sometimes|in:pending,in_progress,completed',
-            'due_date' => 'nullable|date',
+            'due_date' => 'nullable|date|after_or_equal:today',
         ]);
 
         $updateData = [
