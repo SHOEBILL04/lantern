@@ -73,7 +73,7 @@ export default function Welcome() {
               className="welcome-logo"
               draggable="false"
             />
-            <span className="font-logo">LANTERN</span>
+            <span className="lanternWordmark">LANTERN</span>
           </div>
 
           {/* Desktop links */}

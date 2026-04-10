@@ -107,7 +107,7 @@ export default function Navbar() {
                 alt="Lantern Logo"
                 className="h-9 w-auto transition-opacity duration-200 group-hover:opacity-90"
               />
-              <span className="hidden sm:block font-logo text-[1.875rem] tracking-[0.15em] text-[#6EC1FF] transition-colors duration-200 group-hover:text-[#89D0FF]">
+              <span className="hidden sm:block lanternWordmark transition-opacity duration-200 group-hover:opacity-90">
                 LANTERN
               </span>
             </Link>
@@ -121,7 +121,7 @@ export default function Navbar() {
             >
               <div
                 ref={pillRef}
-                className="absolute left-0 top-0 rounded-xl bg-[#1F2937] shadow-sm transition-all duration-300 ease-out opacity-0"
+                className="absolute left-0 top-0 rounded-xl bg-[#1F2937] shadow-sm transition-all duration-500 ease-in-out opacity-0"
                 style={{ width: 0, height: 0 }}
                 aria-hidden="true"
               />
