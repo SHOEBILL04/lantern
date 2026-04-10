@@ -4,17 +4,11 @@ import confetti from "canvas-confetti";
 import { useAuth } from "../../context/AuthContext";
 import "./Dashboard.css";
 
-
-/* ─── Animation delay sequence (ms) ──────────────────────────────────────────
-   header → welcome    :   0
-   stat cards          : 120  (cards stagger individually: 120, 170, 220, 270)
-   subjects section    : 380
-   timer sidebar       : 460
-────────────────────────────────────────────────────────────────────────────── */
-
 export default function Dashboard() {
   const DEFAULT_WEEKLY_GOAL_MINUTES = 1680; // 28h
   const DEFAULT_COURSE_WEEKLY_GOAL_MINUTES = 600; // 10h
+  const MAX_WEEKLY_GOAL_HOURS = 24 * 7;
+  const MAX_WEEKLY_GOAL_MINUTES = MAX_WEEKLY_GOAL_HOURS * 60;
 
   const { user } = useAuth();
   const [data, setData] = useState(null);
@@ -51,8 +45,11 @@ export default function Dashboard() {
   const [showTimer, setShowTimer] = useState(false);
   const [weeklyGoalHoursInput, setWeeklyGoalHoursInput] = useState("28");
   const [isSavingWeeklyGoal, setIsSavingWeeklyGoal] = useState(false);
+  const [weeklyGoalError, setWeeklyGoalError] = useState("");
   const [courseGoalInputs, setCourseGoalInputs] = useState({});
   const [savingCourseGoalId, setSavingCourseGoalId] = useState(null);
+  const [courseGoalErrors, setCourseGoalErrors] = useState({});
+  const [actionErrorMessage, setActionErrorMessage] = useState("");
 
   // ─── Data Fetching ────────────────────────────────────────────────────────────
 
@@ -305,6 +302,49 @@ export default function Dashboard() {
     if (timerMode === "pomodoro" && !isActive) setTimeLeft(val * 60);
   };
 
+  const extractApiErrorMessage = (err) => {
+    const message = err?.response?.data?.message;
+    if (typeof message === "string" && message.trim()) {
+      return message.trim();
+    }
+
+    const validationErrors = err?.response?.data?.errors;
+    if (validationErrors && typeof validationErrors === "object") {
+      for (const fieldErrors of Object.values(validationErrors)) {
+        if (!Array.isArray(fieldErrors)) continue;
+        const firstMessage = fieldErrors.find(
+          (entry) => typeof entry === "string" && entry.trim()
+        );
+        if (firstMessage) return firstMessage.trim();
+      }
+    }
+    return "";
+  };
+
+  const getCourseGoalMinutes = (course) =>
+    Number(course?.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES;
+
+  const getTotalCourseGoalMinutes = (subjects = []) =>
+    subjects.reduce(
+      (subjectSum, subject) =>
+        subjectSum +
+        subject.courses.reduce(
+          (courseSum, course) => courseSum + getCourseGoalMinutes(course),
+          0
+        ),
+      0
+    );
+
+  const getCourseGoalMinutesById = (subjects = [], targetCourseId) => {
+    for (const subject of subjects) {
+      const targetCourse = subject.courses.find(
+        (course) => course.id.toString() === targetCourseId
+      );
+      if (targetCourse) return getCourseGoalMinutes(targetCourse);
+    }
+    return DEFAULT_COURSE_WEEKLY_GOAL_MINUTES;
+  };
+
   // ─── Session Complete ─────────────────────────────────────────────────────────
 
   const handleSessionComplete = async (
@@ -313,9 +353,13 @@ export default function Dashboard() {
   ) => {
     if (durationSeconds <= 0) return;
     if (isPersistingSessionRef.current) return;
-    if (!selectedCourse) { alert("Please select a course first."); return; }
+    if (!selectedCourse) {
+      setActionErrorMessage("Please select a course first so your study session can be saved.");
+      return;
+    }
     isPersistingSessionRef.current = true;
     try {
+      setActionErrorMessage("");
       const durationMinutes = Math.max(1, Math.floor(durationSeconds / 60));
       await api.post("/study-sessions", {
         course_id: selectedCourse,
@@ -331,6 +375,11 @@ export default function Dashboard() {
       fetchDashboardData();
     } catch (err) {
       console.error("Failed to save session", err);
+      const backendMessage = extractApiErrorMessage(err);
+      setActionErrorMessage(
+        backendMessage ||
+        "Timer stopped, but we could not save this study session. Please try again."
+      );
     } finally {
       startTimeRef.current = null;
       isPersistingSessionRef.current = false;
@@ -363,10 +412,15 @@ export default function Dashboard() {
 
   const handleCompleteTask = async (taskId) => {
     try {
+      setActionErrorMessage("");
       await api.patch(`/tasks/${taskId}/complete`);
       fetchDashboardData();
     } catch (err) {
       console.error("Failed to complete task", err);
+      const backendMessage = extractApiErrorMessage(err);
+      setActionErrorMessage(
+        backendMessage || "Could not mark this task as complete. Please try again."
+      );
     }
   };
 
@@ -389,9 +443,15 @@ export default function Dashboard() {
   const displayName = user?.name || user?.email?.split("@")[0] || "there";
 
   const handleSaveWeeklyGoal = async () => {
+    setActionErrorMessage("");
+    setWeeklyGoalError("");
     const parsedHours = Number(weeklyGoalHoursInput);
     if (!Number.isFinite(parsedHours) || parsedHours <= 0) {
-      alert("Please enter a valid weekly goal in hours.");
+      setWeeklyGoalError("Please enter a valid weekly goal in hours.");
+      return;
+    }
+    if (parsedHours > MAX_WEEKLY_GOAL_HOURS) {
+      setWeeklyGoalError(`Weekly goal cannot be more than ${MAX_WEEKLY_GOAL_HOURS} hours.`);
       return;
     }
 
@@ -403,7 +463,10 @@ export default function Dashboard() {
       setWeeklyGoalHoursInput((goalMinutes / 60).toString());
     } catch (err) {
       console.error("Failed to update weekly goal", err);
-      alert("Failed to update weekly goal.");
+      const backendMessage = extractApiErrorMessage(err);
+      setWeeklyGoalError(
+        backendMessage || "We could not update your weekly goal right now. Please try again."
+      );
     } finally {
       setIsSavingWeeklyGoal(false);
     }
@@ -434,13 +497,43 @@ export default function Dashboard() {
     const targetCourseId = courseId?.toString();
     if (!targetCourseId) return;
 
+    setActionErrorMessage("");
+    setCourseGoalErrors((prev) => {
+      if (!prev[targetCourseId]) return prev;
+      const next = { ...prev };
+      delete next[targetCourseId];
+      return next;
+    });
+
     const parsedHours = Number(courseGoalInputs[targetCourseId]);
     if (!Number.isFinite(parsedHours) || parsedHours <= 0) {
-      alert("Please enter a valid course weekly goal in hours.");
+      setCourseGoalErrors((prev) => ({
+        ...prev,
+        [targetCourseId]: "Please enter a valid weekly goal in hours.",
+      }));
+      return;
+    }
+    if (parsedHours > MAX_WEEKLY_GOAL_HOURS) {
+      setCourseGoalErrors((prev) => ({
+        ...prev,
+        [targetCourseId]: `A single course goal cannot exceed ${MAX_WEEKLY_GOAL_HOURS} hours.`,
+      }));
       return;
     }
 
     const goalMinutes = Math.max(1, Math.round(parsedHours * 60));
+    const subjects = data?.subjects || [];
+    const currentTotalGoalMinutes = getTotalCourseGoalMinutes(subjects);
+    const currentCourseGoalMinutes = getCourseGoalMinutesById(subjects, targetCourseId);
+    const nextTotalGoalMinutes = currentTotalGoalMinutes - currentCourseGoalMinutes + goalMinutes;
+    if (nextTotalGoalMinutes > MAX_WEEKLY_GOAL_MINUTES) {
+      setCourseGoalErrors((prev) => ({
+        ...prev,
+        [targetCourseId]: `Total weekly goal for all courses cannot exceed ${MAX_WEEKLY_GOAL_HOURS} hours.`,
+      }));
+      return;
+    }
+
     try {
       setSavingCourseGoalId(targetCourseId);
       await api.patch(`/weekly-goal/course/${targetCourseId}`, { weekly_goal_minutes: goalMinutes });
@@ -462,8 +555,12 @@ export default function Dashboard() {
       });
     } catch (err) {
       console.error("Failed to update course weekly goal", err);
-      const backendMessage = err?.response?.data?.message;
-      alert(backendMessage || "Failed to update course weekly goal.");
+      const backendMessage = extractApiErrorMessage(err);
+      setCourseGoalErrors((prev) => ({
+        ...prev,
+        [targetCourseId]:
+          backendMessage || "We could not update this course goal right now. Please try again.",
+      }));
     } finally {
       setSavingCourseGoalId(null);
     }
@@ -719,6 +816,24 @@ export default function Dashboard() {
         </button>
       </header>
 
+      {actionErrorMessage && (
+        <div
+          role="alert"
+          className="mb-6 sm:mb-8 flex items-start justify-between gap-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3"
+        >
+          <p className="font-sans text-xs sm:text-sm text-rose-200 leading-relaxed">
+            {actionErrorMessage}
+          </p>
+          <button
+            type="button"
+            onClick={() => setActionErrorMessage("")}
+            className="font-sans text-[0.65rem] sm:text-xs font-semibold uppercase tracking-widest text-rose-200 hover:text-rose-100"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* ══════════════════════════════════════════
           2 — Stat cards  (stagger: 120–270ms)
           Each card has its own delay via
@@ -773,9 +888,13 @@ export default function Dashboard() {
             <input
               type="number"
               min="1"
+              max={MAX_WEEKLY_GOAL_HOURS}
               step="0.5"
               value={weeklyGoalHoursInput}
-              onChange={(e) => setWeeklyGoalHoursInput(e.target.value)}
+              onChange={(e) => {
+                setWeeklyGoalHoursInput(e.target.value);
+                if (weeklyGoalError) setWeeklyGoalError("");
+              }}
               className="font-sans w-16 sm:w-20 px-2 py-1 rounded border border-[#30363d] bg-[#0d1117] text-slate-200 text-xs"
               aria-label="Weekly goal in hours"
             />
@@ -788,6 +907,11 @@ export default function Dashboard() {
               {isSavingWeeklyGoal ? "Saving..." : "Save"}
             </button>
           </div>
+          {weeklyGoalError && (
+            <p role="alert" className="font-sans text-[0.68rem] text-rose-400 mb-3">
+              {weeklyGoalError}
+            </p>
+          )}
           <div className="mt-auto">
             <div className="h-1.5 w-full bg-[#21262d] rounded-full overflow-hidden">
               <div
@@ -981,6 +1105,14 @@ export default function Dashboard() {
               />
               <span className="truncate">{activeSubject.name} — Courses &amp; Tasks</span>
             </h2>
+            {actionErrorMessage && (
+              <div
+                role="alert"
+                className="mb-4 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2"
+              >
+                <p className="font-sans text-xs text-rose-200">{actionErrorMessage}</p>
+              </div>
+            )}
             <div className="courses-list">
               {activeSubject.courses.map(course => (
                 <div key={course.id} className="course-block">
@@ -991,17 +1123,25 @@ export default function Dashboard() {
                       <input
                         type="number"
                         min="0.5"
+                        max={MAX_WEEKLY_GOAL_HOURS}
                         step="0.5"
                         value={
                           courseGoalInputs[course.id.toString()] ??
                           ((Number(course.weekly_goal_minutes) || DEFAULT_COURSE_WEEKLY_GOAL_MINUTES) / 60).toString()
                         }
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const courseKey = course.id.toString();
                           setCourseGoalInputs((prev) => ({
                             ...prev,
-                            [course.id.toString()]: e.target.value,
-                          }))
-                        }
+                            [courseKey]: e.target.value,
+                          }));
+                          setCourseGoalErrors((prev) => {
+                            if (!prev[courseKey]) return prev;
+                            const next = { ...prev };
+                            delete next[courseKey];
+                            return next;
+                          });
+                        }}
                         className="course-goal-input"
                         aria-label={`Weekly goal in hours for ${course.title}`}
                       />
@@ -1016,6 +1156,11 @@ export default function Dashboard() {
                       </button>
                     </div>
                   </div>
+                  {courseGoalErrors[course.id.toString()] && (
+                    <p role="alert" className="font-sans text-[0.68rem] text-rose-400 mt-2">
+                      {courseGoalErrors[course.id.toString()]}
+                    </p>
+                  )}
                   <div className="course-progress-row">
                     <span>Progress</span>
                     <span>{fmtHMS(course.weekly_progress_minutes)}/{fmtHMS(course.weekly_goal_minutes)}</span>
