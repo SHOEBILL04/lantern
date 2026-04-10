@@ -1,8 +1,42 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiFileText, FiMenu, FiPaperclip, FiPlus, FiZap, FiTrash2, FiX } from "react-icons/fi";
 import api from "../../api/client";
 import { ENDPOINTS } from "../../api/endpoints";
 import "./notes.css";
+
+const INITIAL_NOTE_FORM = { title: "", task_id: "", content: "", file: null };
+
+function firstValidationMessage(errors) {
+  if (!errors || typeof errors !== "object") return "";
+  const messageList = Object.values(errors).find((messages) => Array.isArray(messages) && messages.length > 0);
+  return messageList ? String(messageList[0]) : "";
+}
+
+function getNotesErrorMessage(error, fallbackMessage) {
+  if (!error?.response) {
+    return "Could not reach the server. Check your internet connection and try again.";
+  }
+
+  const status = error.response.status;
+  const payload = error.response.data || {};
+  const validationMessage = firstValidationMessage(payload.errors);
+
+  if (validationMessage) return validationMessage;
+  if (typeof payload.message === "string" && payload.message.trim()) return payload.message;
+  if (status === 401) return "Your session expired. Please log in again.";
+  if (status === 403) return "You do not have permission to do this action.";
+  if (status === 404) return "The selected note could not be found. Refresh and try again.";
+  if (status === 413) return "The file is too large. Please upload a file smaller than 10 MB.";
+  if (status === 422) return "Some note details are invalid. Please review your input.";
+  if (status >= 500) return "The server hit an error. Please try again in a moment.";
+
+  return fallbackMessage;
+}
+
+function getStorageUrlFromBase(baseUrl, path) {
+  if (!path) return "#";
+  return `${baseUrl}/storage/${path}`;
+}
 
 function AiQuizPanel({ notes, onClose }) {
   const [selectedNoteId, setSelectedNoteId] = useState("");
@@ -39,7 +73,7 @@ function AiQuizPanel({ notes, onClose }) {
       setQuiz(res.data.questions || []);
       setTimeout(() => bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 100);
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to generate quiz. Try again.";
+      const msg = getNotesErrorMessage(err, "Failed to generate quiz. Try again.");
       setError(msg);
     } finally {
       setLoading(false);
@@ -195,26 +229,116 @@ function AiQuizPanel({ notes, onClose }) {
 }
 
 export default function Notes() {
+  // State
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState(null);
+  const [createError, setCreateError] = useState("");
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newNote, setNewNote] = useState({ title: "", task_id: "", content: "", file: null });
+  const [newNote, setNewNote] = useState(INITIAL_NOTE_FORM);
   const [aiPanelOpen, setAiPanelOpen] = useState(true);
   const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
   const [isMobileNotesSidebarOpen, setIsMobileNotesSidebarOpen] = useState(false);
 
-  const getStorageUrl = (path) => {
-    if (!path) return "#";
+  // Derived
+  const storageBaseUrl = useMemo(() => {
     const configuredApiUrl = import.meta.env.VITE_API_URL || "";
-    const baseUrl = configuredApiUrl.replace(/\/api\/?$/, "");
-    return `${baseUrl}/storage/${path}`;
-  };
+    return configuredApiUrl.replace(/\/api\/?$/, "");
+  }, []);
 
+  const taskLabelById = useMemo(() => {
+    const labelMap = new Map();
+    tasks.forEach((task) => {
+      labelMap.set(String(task.id), task.title);
+    });
+    return labelMap;
+  }, [tasks]);
+
+  const getTaskLabel = useCallback((taskId) => {
+    return taskLabelById.get(String(taskId)) || "General";
+  }, [taskLabelById]);
+
+  const getStorageUrl = useCallback((path) => {
+    return getStorageUrlFromBase(storageBaseUrl, path);
+  }, [storageBaseUrl]);
+
+  // Handlers
+  const updateNewNoteField = useCallback((field, value) => {
+    setCreateError("");
+    setNewNote((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const [notesRes, tasksRes] = await Promise.all([api.get(ENDPOINTS.NOTES), api.get(ENDPOINTS.TASKS)]);
+      setNotes(notesRes.data);
+      setTasks(tasksRes.data);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError(getNotesErrorMessage(err, "Failed to load notes."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleCreateNote = useCallback(async (event) => {
+    event.preventDefault();
+    setCreateError("");
+    setNotice(null);
+    setIsCreatingNote(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("title", newNote.title);
+      if (newNote.task_id) formData.append("task_id", newNote.task_id);
+      if (newNote.content) formData.append("content", newNote.content);
+      if (newNote.file) formData.append("file", newNote.file);
+
+      await api.post(ENDPOINTS.NOTES, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setIsCreateModalOpen(false);
+      setNewNote({ ...INITIAL_NOTE_FORM });
+      setNotice({ type: "success", text: "Note saved successfully." });
+      await fetchData();
+    } catch (err) {
+      console.error("Error creating note:", err);
+      setCreateError(getNotesErrorMessage(err, "Failed to upload note."));
+    } finally {
+      setIsCreatingNote(false);
+    }
+  }, [fetchData, newNote]);
+
+  const handleDeleteNote = useCallback(async (id) => {
+    if (!window.confirm("Are you sure you want to delete this note?")) return;
+
+    setNotice(null);
+    setDeletingNoteId(id);
+
+    try {
+      await api.delete(`${ENDPOINTS.NOTES}/${id}`);
+      setNotice({ type: "success", text: "Note deleted successfully." });
+      await fetchData();
+    } catch (err) {
+      console.error("Error deleting note:", err);
+      setNotice({ type: "error", text: getNotesErrorMessage(err, "Failed to delete note.") });
+    } finally {
+      setDeletingNoteId(null);
+    }
+  }, [fetchData]);
+
+  // Effects
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   useEffect(() => {
     const onResize = () => setIsMobileView(window.innerWidth <= 768);
@@ -236,58 +360,6 @@ export default function Notes() {
       document.body.style.overflow = previousOverflow;
     };
   }, [isMobileView, isMobileNotesSidebarOpen]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [notesRes, tasksRes] = await Promise.all([api.get(ENDPOINTS.NOTES), api.get(ENDPOINTS.TASKS)]);
-      setNotes(notesRes.data);
-      setTasks(tasksRes.data);
-      setError("");
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      setError("Failed to load notes.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateNote = async (event) => {
-    event.preventDefault();
-    try {
-      const formData = new FormData();
-      formData.append("title", newNote.title);
-      if (newNote.task_id) formData.append("task_id", newNote.task_id);
-      if (newNote.content) formData.append("content", newNote.content);
-      if (newNote.file) formData.append("file", newNote.file);
-
-      await api.post(ENDPOINTS.NOTES, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      setIsCreateModalOpen(false);
-      setNewNote({ title: "", task_id: "", content: "", file: null });
-      fetchData();
-    } catch (error) {
-      console.error("Error creating note:", error);
-      alert("Failed to upload note.");
-    }
-  };
-
-  const handleDeleteNote = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this note?")) return;
-    try {
-      await api.delete(`${ENDPOINTS.NOTES}/${id}`);
-      fetchData();
-    } catch (error) {
-      console.error("Error deleting note:", error);
-    }
-  };
-
-  const getTaskLabel = (taskId) => {
-    const task = tasks.find((item) => item.id == taskId);
-    return task ? task.title : "General";
-  };
 
   const renderNotesList = (extraClass = "") => (
     <div className={`notes-list ${extraClass}`.trim()}>
@@ -322,9 +394,14 @@ export default function Notes() {
               )}
             </div>
 
-            <button type="button" className="notes-delete-btn" onClick={() => handleDeleteNote(note.id)}>
+            <button
+              type="button"
+              className="notes-delete-btn"
+              onClick={() => handleDeleteNote(note.id)}
+              disabled={deletingNoteId === note.id}
+            >
               <FiTrash2 size={14} />
-              Delete
+              {deletingNoteId === note.id ? "Deleting..." : "Delete"}
             </button>
           </article>
         ))}
@@ -390,7 +467,13 @@ export default function Notes() {
   if (error) {
     return (
       <div className="notes-root dashboard-root font-sans p-8 sm:p-16 text-red-400 bg-[#0d1117] min-h-screen">
-        {error}
+        <div className="notes-load-error-card">
+          <h2 className="notes-load-error-title">Could not load notes</h2>
+          <p className="notes-load-error-text">{error}</p>
+          <button type="button" className="notes-load-error-btn" onClick={fetchData}>
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
@@ -430,6 +513,12 @@ export default function Notes() {
               </button>
             </div>
           </header>
+
+          {notice && (
+            <p className={`notes-feedback notes-feedback--${notice.type}`} role="status">
+              {notice.text}
+            </p>
+          )}
 
           {!(isMobileView && aiPanelOpen) && renderNotesList()}
         </section>
@@ -480,13 +569,19 @@ export default function Notes() {
             </div>
 
             <form onSubmit={handleCreateNote} className="notes-form font-sans">
+              {createError && (
+                <p className="notes-feedback notes-feedback--error notes-feedback--modal" role="alert">
+                  {createError}
+                </p>
+              )}
+
               <div className="notes-form-group">
                 <label className="notes-form-label">Title *</label>
                 <input
                   required
                   className="notes-input"
                   value={newNote.title}
-                  onChange={(event) => setNewNote({ ...newNote, title: event.target.value })}
+                  onChange={(event) => updateNewNoteField("title", event.target.value)}
                   placeholder="Note title"
                 />
               </div>
@@ -496,7 +591,7 @@ export default function Notes() {
                 <select
                   className="notes-input"
                   value={newNote.task_id}
-                  onChange={(event) => setNewNote({ ...newNote, task_id: event.target.value })}
+                  onChange={(event) => updateNewNoteField("task_id", event.target.value)}
                 >
                   <option value="">None</option>
                   {tasks.map((task) => (
@@ -513,7 +608,7 @@ export default function Notes() {
                   rows={4}
                   className="notes-input notes-textarea"
                   value={newNote.content}
-                  onChange={(event) => setNewNote({ ...newNote, content: event.target.value })}
+                  onChange={(event) => updateNewNoteField("content", event.target.value)}
                   placeholder="Write your notes here..."
                 />
               </div>
@@ -524,7 +619,7 @@ export default function Notes() {
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
                   className="notes-input notes-file-input"
-                  onChange={(event) => setNewNote({ ...newNote, file: event.target.files?.[0] || null })}
+                  onChange={(event) => updateNewNoteField("file", event.target.files?.[0] || null)}
                 />
               </div>
 
@@ -536,8 +631,8 @@ export default function Notes() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="notes-modal-btn notes-modal-btn--solid">
-                  Save Note
+                <button type="submit" className="notes-modal-btn notes-modal-btn--solid" disabled={isCreatingNote}>
+                  {isCreatingNote ? "Saving..." : "Save Note"}
                 </button>
               </div>
             </form>
