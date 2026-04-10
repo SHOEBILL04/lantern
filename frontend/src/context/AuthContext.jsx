@@ -5,22 +5,28 @@ import { ENDPOINTS } from "../api/endpoints";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // Force cleanup of legacy token immediately on load
-  if (localStorage.getItem("token")) {
-    localStorage.removeItem("token");
-  }
-
   const [isAuthenticated, setIsAuthenticated] = useState(
     localStorage.getItem("isAuthenticated") === "true"
   );
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")) || null);
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem("user");
+      return (savedUser && savedUser !== "undefined") ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      console.error("Failed to parse user from localStorage", e);
+      return null;
+    }
+  });
   const [authLoading, setAuthLoading] = useState(true);
 
-  const persistAuthenticatedUser = (authenticatedUser) => {
+  const persistAuthenticatedUser = (authenticatedUser, token) => {
     setIsAuthenticated(true);
     setUser(authenticatedUser);
     localStorage.setItem("isAuthenticated", "true");
     localStorage.setItem("user", JSON.stringify(authenticatedUser));
+    if (token) {
+      localStorage.setItem("token", token);
+    }
   };
 
   const clearAuthState = () => {
@@ -28,13 +34,13 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("user");
-    localStorage.removeItem("token"); // Cleanup legacy token
+    localStorage.removeItem("token");
   };
 
   const login = async (email, password) => {
     try {
       const response = await api.post(ENDPOINTS.LOGIN, { email, password });
-      persistAuthenticatedUser(response.data.user);
+      persistAuthenticatedUser(response.data.user, response.data.access_token);
       return { success: true };
     } catch (error) {
       console.error("Login failed:", error);
@@ -48,7 +54,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     try {
       const response = await api.post(ENDPOINTS.REGISTER, { name, email, password });
-      persistAuthenticatedUser(response.data.user);
+      persistAuthenticatedUser(response.data.user, response.data.access_token);
       return { success: true };
     } catch (error) {
       console.error("Registration failed:", error);
@@ -72,7 +78,7 @@ export const AuthProvider = ({ children }) => {
 
   const syncAuthFromServer = async () => {
     try {
-      const response = await api.post(ENDPOINTS.ME); // Using POST as defined in api.php
+      const response = await api.post(ENDPOINTS.ME);
       persistAuthenticatedUser(response.data);
       return { success: true, user: response.data };
     } catch (error) {
