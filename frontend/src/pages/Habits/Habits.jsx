@@ -7,18 +7,55 @@ export default function Habits() {
     const [habits, setHabits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
+    const [habitsFetchError, setHabitsFetchError] = useState('');
+    const [feedback, setFeedback] = useState(null);
 
     // Form State
     const [newHabitName, setNewHabitName] = useState('');
     const [newHabitType, setNewHabitType] = useState('daily');
     const [newHabitSkips, setNewHabitSkips] = useState(0);
 
+    useEffect(() => {
+        if (!feedback) return undefined;
+
+        const timeoutId = setTimeout(() => {
+            setFeedback(null);
+        }, 5000);
+
+        return () => clearTimeout(timeoutId);
+    }, [feedback]);
+
+    const extractErrorMessage = (error, fallbackMessage) => {
+        const responseData = error?.response?.data;
+
+        if (responseData?.errors && typeof responseData.errors === 'object') {
+            const firstValidationError = Object.values(responseData.errors)
+                .flat()
+                .find(Boolean);
+            if (firstValidationError) return firstValidationError;
+        }
+
+        if (typeof responseData?.message === 'string' && responseData.message.trim()) {
+            return responseData.message;
+        }
+
+        if (typeof responseData === 'string' && responseData.trim()) {
+            return responseData;
+        }
+
+        return fallbackMessage;
+    };
+
     const fetchHabits = async () => {
+        setLoading(true);
+        setHabitsFetchError('');
         try {
             const res = await api.get(ENDPOINTS.HABITS);
             setHabits(res.data);
         } catch (error) {
             console.error('Failed to fetch habits', error);
+            setHabits([]);
+            setHabitsFetchError(extractErrorMessage(error, 'Failed to load habits. Please try again.'));
         } finally {
             setLoading(false);
         }
@@ -30,22 +67,33 @@ export default function Habits() {
 
     const addHabit = async (e) => {
         e.preventDefault();
-        if (!newHabitName.trim()) return;
+        const trimmedName = newHabitName.trim();
+        if (!trimmedName) {
+            setFeedback({
+                type: 'error',
+                message: 'Habit name is required.'
+            });
+            return;
+        }
 
         try {
             const res = await api.post(ENDPOINTS.HABITS, {
-                name: newHabitName,
+                name: trimmedName,
                 type: newHabitType,
-                allowed_skips: newHabitType === 'weekly' ? parseInt(newHabitSkips) : 0
+                allowed_skips: newHabitType === 'weekly' ? parseInt(newHabitSkips, 10) || 0 : 0
             });
-            setHabits([...habits, res.data]);
+            setHabits(prevHabits => [...prevHabits, res.data]);
             setNewHabitName('');
             setNewHabitType('daily');
             setNewHabitSkips(0);
             setShowAddForm(false);
+            setFeedback({ type: 'success', message: 'Habit added successfully.' });
         } catch (error) {
             console.error('Failed to add habit', error);
-            alert('Failed to add habit. Please check your inputs.');
+            setFeedback({
+                type: 'error',
+                message: extractErrorMessage(error, 'Failed to add habit. Please check your inputs.')
+            });
         }
     };
 
@@ -53,14 +101,20 @@ export default function Habits() {
         if (!window.confirm('Delete this habit?')) return;
         try {
             await api.delete(`${ENDPOINTS.HABITS}/${id}`);
-            setHabits(habits.filter(h => h.id !== id));
+            setHabits(prevHabits => prevHabits.filter(h => h.id !== id));
+            setFeedback({ type: 'success', message: 'Habit deleted successfully.' });
         } catch (error) {
             console.error('Failed to delete habit', error);
+            setFeedback({
+                type: 'error',
+                message: extractErrorMessage(error, 'Failed to delete habit. Please try again.')
+            });
         }
     };
 
     const trackDay = async (habitId, isCompleted, isSkipped = false) => {
         const habitIndex = habits.findIndex(h => h.id === habitId);
+        if (habitIndex < 0) return;
         const habit = habits[habitIndex];
         if (habit.is_completed) return;
 
@@ -74,7 +128,10 @@ export default function Habits() {
             });
 
             if (res.data.achievement) {
-                alert(res.data.message);
+                setFeedback({
+                    type: 'success',
+                    message: res.data.message || 'Achievement unlocked!'
+                });
             }
 
             // Optimistic update
@@ -93,10 +150,17 @@ export default function Habits() {
             setHabits(updatedHabits);
 
         } catch (error) {
-            if (error.response && error.response.status === 422) {
-                alert(error.response.data.message);
+            if (error?.response?.status === 422) {
+                setFeedback({
+                    type: 'error',
+                    message: extractErrorMessage(error, 'Unable to track habit for today.')
+                });
             } else {
                 console.error('Failed to track day', error);
+                setFeedback({
+                    type: 'error',
+                    message: extractErrorMessage(error, 'Failed to update habit tracking. Please try again.')
+                });
             }
         }
     };
@@ -121,6 +185,20 @@ export default function Habits() {
 
     return (
         <div className="habits-page">
+            {feedback && (
+                <div className={`habits-feedback habits-feedback--${feedback.type}`} role="status" aria-live="polite">
+                    <span>{feedback.message}</span>
+                    <button
+                        type="button"
+                        className="habits-feedback-close"
+                        aria-label="Dismiss message"
+                        onClick={() => setFeedback(null)}
+                    >
+                        &times;
+                    </button>
+                </div>
+            )}
+
             <div className="habits-hero">
                 <div className="habits-hero-text">
                     <p className="habits-kicker">Habits</p>
@@ -199,7 +277,15 @@ export default function Habits() {
                 </form>
             )}
 
-            {habits.length === 0 && !showAddForm ? (
+            {habitsFetchError ? (
+                <div className="habits-empty habits-empty--error" role="alert">
+                    <h3 className="habits-empty-title">Could not load habits</h3>
+                    <p className="habits-empty-text">{habitsFetchError}</p>
+                    <button type="button" className="habits-submit-btn habits-retry-btn" onClick={fetchHabits}>
+                        Retry
+                    </button>
+                </div>
+            ) : habits.length === 0 && !showAddForm ? (
                 <div className="habits-empty">
                     <div className="habits-empty-art" aria-hidden="true">
                         <span className="habits-empty-ring"></span>
