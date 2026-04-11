@@ -78,6 +78,9 @@ class AuthOtpFlowTest extends TestCase
             'email' => $email,
             'password' => Hash::make('password123'),
             'auth_provider' => 'local',
+        ]);
+
+        User::where('email', $email)->update([
             'email_verified_at' => now(),
         ]);
 
@@ -108,6 +111,9 @@ class AuthOtpFlowTest extends TestCase
             'email' => $email,
             'password' => Hash::make('old-password'),
             'auth_provider' => 'local',
+        ]);
+
+        User::where('email', $email)->update([
             'email_verified_at' => now(),
         ]);
 

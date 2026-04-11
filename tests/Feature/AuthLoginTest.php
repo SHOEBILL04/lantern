@@ -24,6 +24,9 @@ class AuthLoginTest extends TestCase
             'name' => 'CI Login User',
             'email' => $email,
             'password' => Hash::make('password123'),
+        ]);
+
+        User::where('email', $email)->update([
             'email_verified_at' => now(),
         ]);
 
