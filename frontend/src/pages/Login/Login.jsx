@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 import "./Login.css";
@@ -27,39 +27,36 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
+  const oauthError = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const errorCode = params.get("error");
     const debugHint = params.get("debug");
     const debugSuffix = import.meta.env.DEV && debugHint ? ` (Debug: ${debugHint})` : "";
 
     if (!errorCode) {
-      setError("");
-      return;
+      return "";
     }
 
     if (errorCode === "google_sync_failed") {
-      setError("We could not complete Google sign-in. Please try again.");
-      return;
+      return "We could not complete Google sign-in. Please try again.";
     }
 
     if (errorCode === "google_auth_failed") {
-      setError(`Google sign-in failed. Please try again.${debugSuffix}`);
-      return;
+      return `Google sign-in failed. Please try again.${debugSuffix}`;
     }
 
     if (errorCode === "google_auth_misconfigured") {
-      setError(`Google sign-in is temporarily unavailable. Please try again later.${debugSuffix}`);
-      return;
+      return `Google sign-in is temporarily unavailable. Please try again later.${debugSuffix}`;
     }
 
     if (errorCode === "google_auth_incomplete_profile") {
-      setError("Your Google account is missing required profile information. Please try a different account.");
-      return;
+      return "Your Google account is missing required profile information. Please try a different account.";
     }
 
-    setError("Google sign-in could not be completed. Please try again.");
+    return "Google sign-in could not be completed. Please try again.";
   }, [location.search]);
+
+  const displayError = error || oauthError;
 
   const handleGoogleSignIn = () => {
     const apiUrl = import.meta.env.VITE_API_URL;
@@ -102,7 +99,7 @@ export default function Login() {
             <p className="loginSubtitle">Sign in to your account</p>
           </div>
 
-          {error && <div className="loginError">{error}</div>}
+          {displayError && <div className="loginError">{displayError}</div>}
 
           <form onSubmit={handleSubmit} className="loginForm">
             <div className="loginField">
@@ -130,7 +127,7 @@ export default function Login() {
                 <input
                   className="loginInput passwordInput"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="********"
                   required
                   value={password}
                   onChange={(e) => {
@@ -155,6 +152,12 @@ export default function Login() {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div className="loginForgotPasswordWrap">
+              <Link to="/forgot-password" className="loginForgotPasswordLink">
+                Forgot Password?
+              </Link>
             </div>
 
             <button

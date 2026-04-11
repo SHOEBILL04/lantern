@@ -6,6 +6,8 @@ import App from "./App";
 import Welcome from "./pages/Welcome/Welcome";
 import Login from "./pages/Login/Login";
 import Register from "./pages/Register/Register";
+import VerifyEmail from "./pages/VerifyEmail/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import HowToStudy from "./pages/HowToStudy/HowToStudy";
 import About from "./pages/About/About";
 import GoogleAuthSuccess from "./pages/GoogleAuthSuccess/GoogleAuthSuccess";
@@ -34,6 +36,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route index element={<Welcome />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="verify-email" element={<VerifyEmail />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="auth/google/success" element={<GoogleAuthSuccess />} />
           <Route path="how-to-study" element={<HowToStudy />} />
           <Route path="about" element={<About />} />
