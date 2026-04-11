@@ -60,6 +60,11 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA', env('APP_ENV') === 'production' ? '/etc/ssl/certs/ca-certificates.crt' : null),
+                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => filter_var(
+                    env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', env('APP_ENV') === 'production' ? 'true' : 'false'),
+                    FILTER_VALIDATE_BOOL,
+                    FILTER_NULL_ON_FAILURE
+                ),
             ]) : [],
         ],
 
