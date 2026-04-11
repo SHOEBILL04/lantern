@@ -47,7 +47,12 @@ bootstrap_schema_if_needed() {
 
   if [ "${users_table_present}" = "0" ]; then
     echo "No application schema detected. Importing schema.sql..."
-    grep -viE '^(CREATE DATABASE|CREATE USER|GRANT |FLUSH PRIVILEGES|USE )' /var/www/html/schema.sql > /tmp/lantern-schema.sql
+    awk '
+      BEGIN { skip = 0 }
+      /^DELIMITER \/\// { skip = 1; next }
+      /^DELIMITER ;/ { skip = 0; next }
+      skip == 0 && $0 !~ /^(CREATE DATABASE|CREATE USER|GRANT |FLUSH PRIVILEGES|USE )/ { print }
+    ' /var/www/html/schema.sql > /tmp/lantern-schema.sql
     if ! mysql \
       -h"${DB_HOST}" \
       -P"${DB_PORT}" \
