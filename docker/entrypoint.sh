@@ -23,8 +23,16 @@ wait_for_mysql() {
 }
 
 bootstrap_schema_if_needed() {
-  if [ "${DB_CONNECTION:-}" != "mysql" ] || [ ! -f /var/www/html/schema.sql ]; then
-    echo "Skipping schema bootstrap."
+  db_connection="${DB_CONNECTION:-mysql}"
+
+  if [ "${db_connection}" != "mysql" ]; then
+    echo "Skipping schema bootstrap because DB_CONNECTION=${db_connection}."
+    return 0
+  fi
+
+  if [ ! -f /var/www/html/schema.sql ]; then
+    echo "Skipping schema bootstrap because /var/www/html/schema.sql was not found."
+    ls -la /var/www/html || true
     return 0
   fi
 
