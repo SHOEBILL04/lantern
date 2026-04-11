@@ -74,7 +74,12 @@ export default function Register() {
 
       if (result.success) {
         if (result.verificationRequired) {
-          navigate(`/verify-email?email=${encodeURIComponent(result.email || cleanEmail)}`);
+          navigate(`/verify-email?email=${encodeURIComponent(result.email || cleanEmail)}`, {
+            state: {
+              otp: result.otp || "",
+              message: result.message || "",
+            },
+          });
           return;
         }
 
