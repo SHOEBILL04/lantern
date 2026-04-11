@@ -48,4 +48,9 @@ bootstrap_schema_if_needed() {
 
 bootstrap_schema_if_needed
 
+php artisan package:discover --ansi
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
 exec apache2-foreground
