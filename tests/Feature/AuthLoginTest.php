@@ -24,6 +24,7 @@ class AuthLoginTest extends TestCase
             'name' => 'CI Login User',
             'email' => $email,
             'password' => Hash::make('password123'),
+            'email_verified_at' => now(),
         ]);
 
         $response = $this->postJson('/api/auth/login', [
@@ -58,6 +59,30 @@ class AuthLoginTest extends TestCase
             ->assertStatus(401)
             ->assertJson([
                 'error' => 'Unauthorized',
+            ]);
+    }
+
+    public function test_unverified_local_user_cannot_login(): void
+    {
+        $email = 'ci-login-' . uniqid() . '@example.com';
+
+        User::create([
+            'name' => 'Unverified User',
+            'email' => $email,
+            'password' => Hash::make('password123'),
+            'auth_provider' => 'local',
+            'email_verified_at' => null,
+        ]);
+
+        $response = $this->postJson('/api/auth/login', [
+            'email' => $email,
+            'password' => 'password123',
+        ]);
+
+        $response
+            ->assertStatus(403)
+            ->assertJson([
+                'error' => 'Please verify your email before logging in.',
             ]);
     }
 

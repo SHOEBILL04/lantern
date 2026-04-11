@@ -3,12 +3,17 @@
 namespace Tests\Feature;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class AuthRegisterTest extends TestCase
 {
     protected function tearDown(): void
     {
+        if (Schema::hasTable('email_otps')) {
+            DB::table('email_otps')->where('email', 'like', 'ci-register-%@example.com')->delete();
+        }
+
         DB::table('users')->where('email', 'like', 'ci-register-%@example.com')->delete();
 
         parent::tearDown();
@@ -25,23 +30,23 @@ class AuthRegisterTest extends TestCase
         ]);
 
         $response
-            ->assertStatus(200)
-            ->assertJsonStructure([
-                'token_type',
-                'expires_in',
-                'user' => ['id', 'name', 'email'],
-            ])
+            ->assertStatus(201)
             ->assertJson([
-                'token_type' => 'bearer',
-                'user' => [
-                    'name' => 'CI Register User',
-                    'email' => $email,
-                ],
+                'verification_required' => true,
+                'email' => $email,
             ]);
 
         $this->assertDatabaseHas('users', [
             'email' => $email,
             'name' => 'CI Register User',
+            'email_verified_at' => null,
         ]);
+
+        if (Schema::hasTable('email_otps')) {
+            $this->assertDatabaseHas('email_otps', [
+                'email' => $email,
+                'purpose' => 'email_verification',
+            ]);
+        }
     }
 }
