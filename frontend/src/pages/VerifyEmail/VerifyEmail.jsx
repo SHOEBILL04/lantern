@@ -18,20 +18,14 @@ export default function VerifyEmail() {
   const location = useLocation();
 
   const defaultEmail = useMemo(() => getEmailFromQuery(location.search), [location.search]);
-  const prefilledOtp = typeof location.state?.otp === "string" ? location.state.otp : "";
-  const stateMessage = typeof location.state?.message === "string" ? location.state.message : "";
 
   const [email, setEmail] = useState(defaultEmail);
-  const [otp, setOtp] = useState(prefilledOtp);
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState(
-    stateMessage
-      ? prefilledOtp
-        ? `${stateMessage} Use OTP: ${prefilledOtp}`
-        : stateMessage
-      : defaultEmail
-        ? `We sent a 6-digit verification code to ${defaultEmail}.`
-        : "Enter your email and the 6-digit code sent to your inbox."
+    defaultEmail
+      ? `We sent a 6-digit verification code to ${defaultEmail}.`
+      : "Enter your email and the 6-digit code sent to your inbox."
   );
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -92,11 +86,7 @@ export default function VerifyEmail() {
       return;
     }
 
-    setInfo(
-      result.otp
-        ? `${result.message || "A new OTP code has been sent."} Use OTP: ${result.otp}`
-        : result.message || "A new OTP code has been sent."
-    );
+    setInfo(result.message || "A new OTP code has been sent.");
   };
 
   return (

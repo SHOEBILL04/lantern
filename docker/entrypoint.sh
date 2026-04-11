@@ -75,6 +75,7 @@ php artisan package:discover --ansi
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
+php artisan db:seed --force
 echo "Lantern startup complete."
 
 exec apache2-foreground

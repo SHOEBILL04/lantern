@@ -15,7 +15,6 @@ Route::get('/health', function () {
         'users_table' => false,
         'jwt_secret' => filled(config('jwt.secret')),
     ];
-    $dbError = null;
 
     try {
         DB::connection()->getPdo();
@@ -23,10 +22,6 @@ Route::get('/health', function () {
         $checks['users_table'] = Schema::hasTable('users');
     } catch (\Throwable $e) {
         report($e);
-        $dbError = [
-            'type' => class_basename($e),
-            'message' => $e->getMessage(),
-        ];
     }
 
     $ok = ! in_array(false, $checks, true);
@@ -34,7 +29,6 @@ Route::get('/health', function () {
     return response()->json([
         'status' => $ok ? 'API working' : 'API degraded',
         'checks' => $checks,
-        'db_error' => $dbError,
     ], $ok ? 200 : 503);
 });
 

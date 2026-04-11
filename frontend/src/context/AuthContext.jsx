@@ -195,7 +195,6 @@ export const AuthProvider = ({ children }) => {
           success: true,
           verificationRequired: true,
           email: response.data?.email || email,
-          otp: response.data?.otp || "",
           message:
             response.data?.message ||
             "Account created. Please verify your email using the OTP code.",
@@ -242,7 +241,6 @@ export const AuthProvider = ({ children }) => {
       return {
         success: true,
         message: response.data?.message || "A new OTP code has been sent.",
-        otp: response.data?.otp || "",
       };
     } catch (error) {
       console.error("Resend email OTP failed:", error);
