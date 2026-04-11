@@ -55,12 +55,6 @@ export default function Register() {
       return;
     }
 
-    // Email must end with @gmail.com (case/space safe)
-    if (!cleanEmail.endsWith("@gmail.com")) {
-      setError("Please use a valid Gmail address (example@gmail.com).");
-      return;
-    }
-
     // Password must be at least 8 characters
     if (password.length < 8) {
       setError("Password must be at least 8 characters long.");
@@ -79,17 +73,16 @@ export default function Register() {
       const result = await register(cleanName, cleanEmail, password);
 
       if (result.success) {
-        alert(
-          `🎉 Welcome to Lantern, ${cleanName}!\n\n` +
-            `Your account has been successfully created.\n` +
-            `We're excited to have you on board 🚀`
-        );
+        if (result.verificationRequired) {
+          navigate(`/verify-email?email=${encodeURIComponent(result.email || cleanEmail)}`);
+          return;
+        }
 
         navigate("/dashboard");
       } else {
         setError(result.message);
       }
-    } catch (err) {
+    } catch {
       setError("We could not create your account right now. Please try again.");
     } finally {
       setLoading(false);
@@ -139,7 +132,7 @@ export default function Register() {
               <input
                 className="registerInput"
                 type="email"
-                placeholder="example@gmail.com"
+                placeholder="example@email.com"
                 required
                 value={email}
                 onChange={(e) => {
