@@ -38,6 +38,7 @@ class AuthController extends Controller
 
         $email = strtolower(trim($validated['email']));
         $name = trim($validated['name']);
+        $verificationRequired = $this->isEmailVerificationRequired();
         
         try {
             $existingUser = User::where('email', $email)->first();
@@ -58,7 +59,16 @@ class AuthController extends Controller
                 $existingUser->name = $name;
                 $existingUser->password = Hash::make($validated['password']);
                 $existingUser->auth_provider = 'local';
+                if (! $verificationRequired) {
+                    $existingUser->email_verified_at = now();
+                }
                 $existingUser->save();
+
+                if (! $verificationRequired) {
+                    $token = auth()->login($existingUser);
+
+                    return $this->respondWithToken($token);
+                }
 
                 $otpDispatch = $this->sendEmailVerificationOtp($email);
 
@@ -81,12 +91,22 @@ class AuthController extends Controller
                 return response()->json($response);
             }
 
+            $emailVerifiedAt = $verificationRequired ? null : now();
             User::create([
                 'name' => $name,
                 'email' => $email,
                 'password' => Hash::make($validated['password']),
                 'auth_provider' => 'local',
+                'email_verified_at' => $emailVerifiedAt,
             ]);
+
+            $createdUser = User::where('email', $email)->firstOrFail();
+
+            if (! $verificationRequired) {
+                $token = auth()->login($createdUser);
+
+                return $this->respondWithToken($token);
+            }
 
             $otpDispatch = $this->sendEmailVerificationOtp($email);
 
@@ -504,6 +524,11 @@ class AuthController extends Controller
     {
         return filter_var(env('OTP_DEBUG_EXPOSE', false), FILTER_VALIDATE_BOOL)
             && $this->shouldFallbackToLoggedOtp();
+    }
+
+    private function isEmailVerificationRequired(): bool
+    {
+        return ! filter_var(env('DISABLE_EMAIL_OTP_VERIFICATION', false), FILTER_VALIDATE_BOOL);
     }
 
     private function otpFailureResponse(string $reason, string $context)
