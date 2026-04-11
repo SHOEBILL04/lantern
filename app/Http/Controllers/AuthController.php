@@ -398,6 +398,16 @@ class AuthController extends Controller
 
     private function sendOtpMail(string $email, string $subject, string $firstLine): void
     {
+        if ($this->shouldFallbackToLoggedOtp()) {
+            Log::warning('OTP email delivery is not configured. Logging OTP content instead.', [
+                'email' => $email,
+                'subject' => $subject,
+                'body' => $firstLine,
+            ]);
+
+            return;
+        }
+
         $body = implode("\n", [
             $firstLine,
             'If you did not request this, you can safely ignore this email.',
@@ -408,6 +418,29 @@ class AuthController extends Controller
         Mail::raw($body, function ($message) use ($email, $subject): void {
             $message->to($email)->subject($subject);
         });
+    }
+
+    private function shouldFallbackToLoggedOtp(): bool
+    {
+        if (config('mail.default') !== 'smtp') {
+            return false;
+        }
+
+        $host = (string) config('mail.mailers.smtp.host');
+        $username = config('mail.mailers.smtp.username');
+        $password = config('mail.mailers.smtp.password');
+
+        return $host === ''
+            || $host === 'mailpit'
+            || $host === 'smtp.your-provider.com'
+            || $username === null
+            || $username === ''
+            || $username === 'null'
+            || $username === 'your_smtp_username'
+            || $password === null
+            || $password === ''
+            || $password === 'null'
+            || $password === 'your_smtp_password';
     }
 
     private function otpFailureResponse(string $reason, string $context)
