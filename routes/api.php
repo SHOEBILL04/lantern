@@ -1,12 +1,37 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\WeeklyGoalController;
+use Throwable;
 
-Route::get('/health', fn () => response()->json(['status' => 'API working']));
+Route::get('/health', function () {
+    $checks = [
+        'app' => true,
+        'db' => false,
+        'users_table' => false,
+        'jwt_secret' => filled(config('jwt.secret')),
+    ];
+
+    try {
+        DB::connection()->getPdo();
+        $checks['db'] = true;
+        $checks['users_table'] = Schema::hasTable('users');
+    } catch (Throwable $e) {
+        report($e);
+    }
+
+    $ok = ! in_array(false, $checks, true);
+
+    return response()->json([
+        'status' => $ok ? 'API working' : 'API degraded',
+        'checks' => $checks,
+    ], $ok ? 200 : 503);
+});
 
 Route::group([
     'middleware' => 'api',

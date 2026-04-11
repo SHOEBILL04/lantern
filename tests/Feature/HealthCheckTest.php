@@ -10,8 +10,10 @@ class HealthCheckTest extends TestCase
     {
         $this->getJson('/api/health')
             ->assertOk()
-            ->assertJson([
-                'status' => 'API working',
-            ]);
+            ->assertJsonPath('status', 'API working')
+            ->assertJsonPath('checks.app', true)
+            ->assertJsonPath('checks.db', true)
+            ->assertJsonPath('checks.users_table', true)
+            ->assertJsonPath('checks.jwt_secret', true);
     }
 }
