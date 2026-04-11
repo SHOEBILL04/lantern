@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Services\EmailOtpService;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -100,24 +101,51 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $email = strtolower(trim($validated['email']));
 
-        if ($user && $user->auth_provider === 'google' && ! empty($user->google_id)) {
+        try {
+            $user = User::where('email', $email)->first();
+
+            if ($user && $user->auth_provider === 'google' && ! empty($user->google_id)) {
+                return response()->json([
+                    'error' => 'This account uses Google sign-in. Please click Continue with Google.',
+                ], 422);
+            }
+
+            if ($user && $user->auth_provider === 'local' && is_null($user->email_verified_at)) {
+                return response()->json([
+                    'error' => 'Please verify your email before logging in.',
+                ], 403);
+            }
+
+            $credentials = [
+                'email' => $email,
+                'password' => $validated['password'],
+            ];
+
+            if (! $token = auth()->attempt($credentials)) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+        } catch (QueryException $e) {
+            Log::error('Login failed because the database is unavailable.', [
+                'email' => $email,
+                'exception_class' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
             return response()->json([
-                'error' => 'This account uses Google sign-in. Please click Continue with Google.',
-            ], 422);
-        }
+                'error' => 'Authentication service is temporarily unavailable. Please try again shortly.',
+            ], 503);
+        } catch (Throwable $e) {
+            Log::error('Login failed due to an unexpected authentication error.', [
+                'email' => $email,
+                'exception_class' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
 
-        if ($user && $user->auth_provider === 'local' && is_null($user->email_verified_at)) {
             return response()->json([
-                'error' => 'Please verify your email before logging in.',
-            ], 403);
-        }
-
-        $credentials = $request->only('email', 'password');
-
-        if (! $token = auth()->attempt($credentials)) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+                'error' => 'Authentication service is temporarily unavailable. Please try again shortly.',
+            ], 503);
         }
 
         return $this->respondWithToken($token);

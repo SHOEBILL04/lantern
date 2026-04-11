@@ -111,6 +111,13 @@ const getFriendlyAuthMessage = (error, fallbackMessage) => {
     return "Too many attempts. Please wait a moment and try again.";
   }
 
+  if (status === 503) {
+    return (
+      normalizedServerMessage ||
+      "Authentication is temporarily unavailable. Please check the server and database connection, then try again."
+    );
+  }
+
   if (status >= 500) {
     return "Something went wrong on our side. Please try again in a moment.";
   }
@@ -132,6 +139,16 @@ export const AuthProvider = ({ children }) => {
     }
   });
   const [authLoading, setAuthLoading] = useState(true);
+
+  const hasStoredAuthState = () => {
+    const savedUser = localStorage.getItem("user");
+
+    return (
+      localStorage.getItem("token") ||
+      localStorage.getItem("isAuthenticated") === "true" ||
+      (savedUser && savedUser !== "undefined")
+    );
+  };
 
   const persistAuthenticatedUser = (authenticatedUser, token) => {
     setIsAuthenticated(true);
@@ -302,7 +319,9 @@ export const AuthProvider = ({ children }) => {
       persistAuthenticatedUser(response.data);
       return { success: true, user: response.data };
     } catch (error) {
-      console.error("Auth check failed:", error);
+      if (error?.response?.status !== 401) {
+        console.error("Auth check failed:", error);
+      }
       clearAuthState();
       return { success: false };
     }
@@ -311,6 +330,11 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async () => {
     setAuthLoading(true);
     try {
+      if (!hasStoredAuthState()) {
+        clearAuthState();
+        return;
+      }
+
       await syncAuthFromServer();
     } finally {
       setAuthLoading(false);
