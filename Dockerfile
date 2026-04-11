@@ -2,6 +2,7 @@ FROM php:8.1-apache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
+    ca-certificates \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
@@ -9,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
+    default-mysql-client \
     libonig-dev \
     libxml2-dev && \
     apt-get clean && \
@@ -25,6 +27,9 @@ WORKDIR /var/www/html
 
 # Copy the application code
 COPY . .
+
+# Add container startup script
+RUN chmod +x /var/www/html/docker/entrypoint.sh
 
 # Set Apache document root to public
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
@@ -43,5 +48,5 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 # Expose port 80
 EXPOSE 80
 
-# Start Apache in the foreground
-CMD ["apache2-foreground"]
+# Start the app through the bootstrap script
+CMD ["/var/www/html/docker/entrypoint.sh"]
