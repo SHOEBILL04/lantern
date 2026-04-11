@@ -422,10 +422,14 @@ class AuthController extends Controller
     private function sendOtpMail(string $email, string $subject, string $firstLine): void
     {
         if ($this->shouldFallbackToLoggedOtp()) {
+            preg_match('/(\d{6})/', $firstLine, $matches);
+            $otp = $matches[1] ?? null;
+
             Log::warning('OTP email delivery is not configured. Logging OTP content instead.', [
                 'email' => $email,
                 'subject' => $subject,
                 'body' => $firstLine,
+                'otp' => $otp,
             ]);
 
             return;
