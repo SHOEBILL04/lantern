@@ -38,59 +38,82 @@ class AuthController extends Controller
 
         $email = strtolower(trim($validated['email']));
         $name = trim($validated['name']);
-        $existingUser = User::where('email', $email)->first();
+        
+        try {
+            $existingUser = User::where('email', $email)->first();
 
-        if ($existingUser && $existingUser->auth_provider === 'google' && ! empty($existingUser->google_id)) {
-            return response()->json([
-                'error' => 'This email is linked to Google sign-in. Please click Continue with Google.',
-            ], 422);
-        }
+            if ($existingUser && $existingUser->auth_provider === 'google' && ! empty($existingUser->google_id)) {
+                return response()->json([
+                    'error' => 'This email is linked to Google sign-in. Please click Continue with Google.',
+                ], 422);
+            }
 
-        if ($existingUser && ! is_null($existingUser->email_verified_at)) {
-            return response()->json([
-                'error' => 'An account with this email already exists. Please log in.',
-            ], 422);
-        }
+            if ($existingUser && ! is_null($existingUser->email_verified_at)) {
+                return response()->json([
+                    'error' => 'An account with this email already exists. Please log in.',
+                ], 422);
+            }
 
-        if ($existingUser) {
-            $existingUser->name = $name;
-            $existingUser->password = Hash::make($validated['password']);
-            $existingUser->auth_provider = 'local';
-            $existingUser->save();
+            if ($existingUser) {
+                $existingUser->name = $name;
+                $existingUser->password = Hash::make($validated['password']);
+                $existingUser->auth_provider = 'local';
+                $existingUser->save();
+
+                if (! $this->sendEmailVerificationOtp($email)) {
+                    return response()->json([
+                        'error' => 'We could not send a verification code right now. Please try again.',
+                    ], 500);
+                }
+
+                return response()->json([
+                    'message' => 'Account exists but not verified. A new verification code has been sent.',
+                    'verification_required' => true,
+                    'email' => $email,
+                ]);
+            }
+
+            User::create([
+                'name' => $name,
+                'email' => $email,
+                'password' => Hash::make($validated['password']),
+                'auth_provider' => 'local',
+            ]);
 
             if (! $this->sendEmailVerificationOtp($email)) {
                 return response()->json([
-                    'error' => 'We could not send a verification code right now. Please try again.',
+                    'error' => 'Your account was created, but we could not send the verification code. Please retry.',
+                    'verification_required' => true,
+                    'email' => $email,
                 ], 500);
             }
 
             return response()->json([
-                'message' => 'Account exists but not verified. A new verification code has been sent.',
+                'message' => 'Account created. We sent a verification code to your email.',
                 'verification_required' => true,
                 'email' => $email,
+            ], 201);
+        } catch (QueryException $e) {
+            Log::error('Registration failed because the database is unavailable.', [
+                'email' => $email,
+                'exception_class' => $e::class,
+                'message' => $e->getMessage(),
             ]);
-        }
 
-        User::create([
-            'name' => $name,
-            'email' => $email,
-            'password' => Hash::make($validated['password']),
-            'auth_provider' => 'local',
-        ]);
-
-        if (! $this->sendEmailVerificationOtp($email)) {
             return response()->json([
-                'error' => 'Your account was created, but we could not send the verification code. Please retry.',
-                'verification_required' => true,
+                'error' => 'Registration is temporarily unavailable. Please try again shortly.',
+            ], 503);
+        } catch (Throwable $e) {
+            Log::error('Registration failed due to an unexpected error.', [
                 'email' => $email,
-            ], 500);
-        }
+                'exception_class' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
 
-        return response()->json([
-            'message' => 'Account created. We sent a verification code to your email.',
-            'verification_required' => true,
-            'email' => $email,
-        ], 201);
+            return response()->json([
+                'error' => 'Registration is temporarily unavailable. Please try again shortly.',
+            ], 503);
+        }
     }
 
     // POST /api/login
