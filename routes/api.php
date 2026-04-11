@@ -7,7 +7,6 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\WeeklyGoalController;
-use Throwable;
 
 Route::get('/health', function () {
     $checks = [
@@ -21,7 +20,7 @@ Route::get('/health', function () {
         DB::connection()->getPdo();
         $checks['db'] = true;
         $checks['users_table'] = Schema::hasTable('users');
-    } catch (Throwable $e) {
+    } catch (\Throwable $e) {
         report($e);
     }
 
