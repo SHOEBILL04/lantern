@@ -16,6 +16,10 @@ Route::group([
     Route::get('/google/callback', [GoogleAuthController::class, 'handleGoogleCallback']);
 
     Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/verify-email-otp', [AuthController::class, 'verifyEmailOtp']);
+    Route::post('/resend-email-otp', [AuthController::class, 'resendEmailOtp']);
+    Route::post('/forgot-password/request-otp', [AuthController::class, 'requestPasswordResetOtp']);
+    Route::post('/forgot-password/reset', [AuthController::class, 'resetPasswordWithOtp']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
