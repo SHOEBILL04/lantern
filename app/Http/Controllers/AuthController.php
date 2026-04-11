@@ -60,17 +60,25 @@ class AuthController extends Controller
                 $existingUser->auth_provider = 'local';
                 $existingUser->save();
 
-                if (! $this->sendEmailVerificationOtp($email)) {
+                $otpDispatch = $this->sendEmailVerificationOtp($email);
+
+                if (! $otpDispatch['sent']) {
                     return response()->json([
                         'error' => 'We could not send a verification code right now. Please try again.',
                     ], 500);
                 }
 
-                return response()->json([
+                $response = [
                     'message' => 'Account exists but not verified. A new verification code has been sent.',
                     'verification_required' => true,
                     'email' => $email,
-                ]);
+                ];
+
+                if ($otpDispatch['otp'] !== null) {
+                    $response['otp'] = $otpDispatch['otp'];
+                }
+
+                return response()->json($response);
             }
 
             User::create([
@@ -80,7 +88,9 @@ class AuthController extends Controller
                 'auth_provider' => 'local',
             ]);
 
-            if (! $this->sendEmailVerificationOtp($email)) {
+            $otpDispatch = $this->sendEmailVerificationOtp($email);
+
+            if (! $otpDispatch['sent']) {
                 return response()->json([
                     'error' => 'Your account was created, but we could not send the verification code. Please retry.',
                     'verification_required' => true,
@@ -88,11 +98,17 @@ class AuthController extends Controller
                 ], 500);
             }
 
-            return response()->json([
+            $response = [
                 'message' => 'Account created. We sent a verification code to your email.',
                 'verification_required' => true,
                 'email' => $email,
-            ], 201);
+            ];
+
+            if ($otpDispatch['otp'] !== null) {
+                $response['otp'] = $otpDispatch['otp'];
+            }
+
+            return response()->json($response, 201);
         } catch (QueryException $e) {
             Log::error('Registration failed because the database is unavailable.', [
                 'email' => $email,
@@ -237,17 +253,25 @@ class AuthController extends Controller
             ], 422);
         }
 
-        if (! $this->sendEmailVerificationOtp($email)) {
+        $otpDispatch = $this->sendEmailVerificationOtp($email);
+
+        if (! $otpDispatch['sent']) {
             return response()->json([
                 'error' => 'We could not send a verification code right now. Please try again.',
             ], 500);
         }
 
-        return response()->json([
+        $response = [
             'message' => 'A new verification code has been sent to your email.',
             'verification_required' => true,
             'email' => $email,
-        ]);
+        ];
+
+        if ($otpDispatch['otp'] !== null) {
+            $response['otp'] = $otpDispatch['otp'];
+        }
+
+        return response()->json($response);
     }
 
     // POST /api/auth/forgot-password/request-otp
@@ -373,7 +397,7 @@ class AuthController extends Controller
         return cookie()->forget('token', '/', env('SESSION_DOMAIN'));
     }
 
-    private function sendEmailVerificationOtp(string $email): bool
+    private function sendEmailVerificationOtp(string $email): array
     {
         try {
             $otp = $this->emailOtpService->issue($email, EmailOtpService::PURPOSE_EMAIL_VERIFICATION);
@@ -384,7 +408,10 @@ class AuthController extends Controller
                 "Your Lantern verification code is {$otp}. It expires in 10 minutes."
             );
 
-            return true;
+            return [
+                'sent' => true,
+                'otp' => $this->shouldExposeOtp() ? $otp : null,
+            ];
         } catch (Throwable $e) {
             Log::error('Failed to send email verification OTP', [
                 'email' => $email,
@@ -392,7 +419,10 @@ class AuthController extends Controller
                 'message' => $e->getMessage(),
             ]);
 
-            return false;
+            return [
+                'sent' => false,
+                'otp' => null,
+            ];
         }
     }
 
@@ -468,6 +498,12 @@ class AuthController extends Controller
             || $password === ''
             || $password === 'null'
             || $password === 'your_smtp_password';
+    }
+
+    private function shouldExposeOtp(): bool
+    {
+        return filter_var(env('OTP_DEBUG_EXPOSE', false), FILTER_VALIDATE_BOOL)
+            && $this->shouldFallbackToLoggedOtp();
     }
 
     private function otpFailureResponse(string $reason, string $context)
